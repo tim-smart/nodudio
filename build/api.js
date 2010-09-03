@@ -1,14 +1,20 @@
-var Task, not_found, redis;
+var RELATIONS, Task, not_found, redis;
 redis = require('./redis');
 Task = require('parallel').Task;
+RELATIONS = {
+  song: [],
+  artist: ['song', 'album'],
+  album: ['song']
+};
 module.exports = {
   get: function(resource, id, action, cb) {
     var model;
     if (!(resource)) {
       return cb(not_found);
     }
-    action || (action = 'show');
-    action = action.toLowerCase();
+    if (action) {
+      action = action.toLowerCase();
+    }
     resource = resource.toLowerCase();
     try {
       model = require("./model/" + (resource));
@@ -47,8 +53,40 @@ module.exports = {
       if (error) {
         return cb(error);
       }
+      if (!(result.id)) {
+        return cb(null, result);
+      }
       result.set('_id', id);
-      return cb(null, result);
+      return action && ~RELATIONS[resource].indexOf(action) ? redis.getModelLinks(result, action, function(error, results) {
+        var _a, _b, _c, id, ret, task;
+        if (error) {
+          return cb(error);
+        }
+        model = require("./model/" + (action));
+        task = new Task();
+        _b = results;
+        for (_a = 0, _c = _b.length; _a < _c; _a++) {
+          id = _b[_a];
+          id = id.toString();
+          task.add(id, [redis.getModel, new model(), id]);
+        }
+        error = null;
+        ret = [];
+        return task.run(function(task, err, instance) {
+          if (err) {
+            error = err;
+          }
+          if (!task) {
+            if (error) {
+              return cb(error);
+            }
+            return cb(null, ret);
+          } else if (instance && instance.id) {
+            instance.set('_id', task);
+            return ret.push(instance);
+          }
+        });
+      }) : cb(null, result);
     });
   }
 };

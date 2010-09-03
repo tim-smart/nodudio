@@ -31,8 +31,10 @@ saveArtist = (song, tags, cb) ->
 
 saveAlbum = (artist, song, tags, cb) ->
   album = new Album
-    name: song.get 'album_name'
-    year: tags.get('year') or ''
+    name:        song.get 'album_name'
+    artist_id:   artist.id
+    artist_name: artist.get 'name'
+    year:        tags.get('year') or ''
   album_lower = idFromString album.get 'name'
   song_lower  = idFromString song.get 'title'
   redis.getLink "artist:#{artist.id}", album_lower, (error, link) ->
@@ -45,7 +47,8 @@ saveAlbum = (artist, song, tags, cb) ->
     link_task = new Task
       song:    [redis.addLink, "song", "#{song_lower}:#{artist.lower}:#{album_lower}", song.id]
       artist:  [redis.addModelLink, artist, album]
-      artist2: [redis.addLink, 'artist', artist.lower, artist.id]
+      artist2: [redis.addModelLink, artist, song]
+      artist3: [redis.addLink, 'artist', artist.lower, artist.id]
       album:   [redis.addModelLink, album, song]
       album2:  [redis.addLink, "artist:#{artist.id}", album_lower, album.id]
     error = null
@@ -141,13 +144,13 @@ scanDirectory = (dir, cb) ->
     task = new Task
     for filename in list
       if isMedia filename
-        task.add filename, [fs.stat, path.join dir, filename]
-      else if stat.isDirectory()
-        ((dir) -> scanDirectory dir, -> watchDirectory dir)(path.join dir, filename)
+        task.add filename, [fs.stat, path_m.join dir, filename]
     task.run (filename, error, stat) ->
       if not task then cb()
       else if stat
-        addToQueue path.join(dir, filename), stat
+        if stat.isDirectory()
+          ((dir) -> scanDirectory dir, -> watchDirectory dir)(path_m.join dir, filename)
+        else addToQueue path_m.join(dir, filename), stat
 
 isMedia = (filename) ->
   config.filetypes.indexOf(path_m.extname filename) isnt -1

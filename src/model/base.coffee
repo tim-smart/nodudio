@@ -1,4 +1,5 @@
-redis = require '../redis'
+redis  = require '../redis'
+server = require '../server'
 
 class Base
   constructor: (data) ->
@@ -19,6 +20,9 @@ class Base
   exists: (cb) ->
 
   save: (cb) ->
-    redis.saveModel this, cb
+    redis.saveModel this, (error, model) ->
+      return cb error if error
+      socket.broadcast "save:#{model.name}:#{model.id}|#{JSON.stringify(model.data)}"
+      cb null, model
 
 module.exports = Base

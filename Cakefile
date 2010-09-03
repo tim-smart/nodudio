@@ -57,12 +57,26 @@ task 'build:redis', 'Build the redis server', ->
   run 'cd deps/redis && make'
 
 task 'build:client', 'Build client coffee', ->
-  coffee_package = new Package 'public/js/all.js', [
-    'assets/coffee'
-  ],
+  scripts = new Package 'public/js/all.js', [
+    'assets/coffee/nodudio.coffee'
+    'assets/js/events.js'
+    'assets/js/socket.io.js'
+    'assets/coffee/socket.coffee'
+  ], {
     type:     'coffee'
     wrap:     yes
-    compile:  no
+    compile:  yes
     compress: no
     watch:    no
-  coffee_package.serve()
+  }
+  scripts.serve()
+
+  css = new Package 'public/css/master.css', [
+    'assets/css'
+  ], {
+    type:     'css'
+    compile:  yes
+    compress: no
+    watch:    no
+  }
+  css.serve()

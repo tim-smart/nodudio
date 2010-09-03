@@ -1,4 +1,4 @@
-var api, fs, handleResult, pathm, redis, respondWith404, sendFile, sys;
+var api, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders, sys;
 sys = require('sys');
 redis = require('./redis');
 api = require('./api');
@@ -16,7 +16,7 @@ module.exports = function() {
         return respondWith404(request, response);
       }
       return sendFile(request, response, song.get('path'));
-    }) : api.get(resource, id, null, function(error, result) {
+    }) : api.get(resource, id, action, function(error, result) {
       if (error) {
         return respondWith404(request, response);
       }
@@ -37,6 +37,7 @@ handleResult = function(request, response, result) {
       }
       return _a;
     })();
+    result.path = undefined;
   } else if (result.data) {
     result = result.data;
   }
@@ -46,7 +47,7 @@ handleResult = function(request, response, result) {
 };
 sendFile = function(request, response, path) {
   return fs.stat(path, function(error, stat) {
-    var _a, file, mime;
+    var _a, file, headers, mime, read_opts;
     if (error) {
       return respondWith404(request, response);
     }
@@ -57,19 +58,41 @@ sendFile = function(request, response, path) {
         return 'audio/mpeg';
       }
     })();
-    response.writeHead(200, {
+    read_opts = {};
+    headers = {
       'Content-Type': mime,
       'Content-Length': stat.size,
       'Last-Modified': stat.mtime.toUTCString(),
       'Expires': new Date(Date.now() + 31536000000).toUTCString(),
       'Cache-Control': 'public max-age=' + 31536000
-    });
-    file = fs.createReadStream(path);
+    };
+    if (request.headers['range']) {
+      setRangeHeaders(request, stat, headers, read_opts);
+      response.sendHeaders(206, headers);
+    } else {
+      response.sendHeaders(200, headers);
+    }
+    file = fs.createReadStream(path, read_opts);
     sys.pump(file, response);
     return file.on('end', function() {
       return response.end();
     });
   });
+};
+setRangeHeaders = function(request, stat, headers, read_opts) {
+  var range;
+  range = request.headers['range'].substring(6).split('-');
+  read_opts.start = +range[0];
+  read_opts.end = +range[1];
+  if (range[1].length === 0) {
+    read_opts.end = stat.size - 1;
+  } else if (range[0].length === 0) {
+    read_opts.end = stat.size - 1;
+    read_opts.start = read_opts.end - +range[1] + 1;
+  }
+  headers['Accept-Ranges'] = 'bytes';
+  headers['Content-Length'] = read_opts.end - read_opts.start + 1;
+  return (headers['Content-Range'] = ("bytes " + (read_opts.start) + "-" + (read_opts.end) + "/" + (stat.size)));
 };
 respondWith404 = function(request, response) {
   return response.sendJson(404, {

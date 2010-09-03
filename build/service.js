@@ -44,6 +44,8 @@ saveAlbum = function(artist, song, tags, cb) {
   var album, album_lower, saved, song_lower;
   album = new Album({
     name: song.get('album_name'),
+    artist_id: artist.id,
+    artist_name: artist.get('name'),
     year: tags.get('year') || ''
   });
   album_lower = idFromString(album.get('name'));
@@ -66,7 +68,8 @@ saveAlbum = function(artist, song, tags, cb) {
     link_task = new Task({
       song: [redis.addLink, "song", ("" + (song_lower) + ":" + (artist.lower) + ":" + (album_lower)), song.id],
       artist: [redis.addModelLink, artist, album],
-      artist2: [redis.addLink, 'artist', artist.lower, artist.id],
+      artist2: [redis.addModelLink, artist, song],
+      artist3: [redis.addLink, 'artist', artist.lower, artist.id],
       album: [redis.addModelLink, album, song],
       album2: [redis.addLink, ("artist:" + (artist.id)), album_lower, album.id]
     });
@@ -222,31 +225,27 @@ watchDirectory = function(dir) {
 };
 scanDirectory = function(dir, cb) {
   return fs.readdir(dir, function(error, list) {
-    var _a, _b, _c, task;
+    var _a, _b, _c, filename, task;
     if (error) {
       return console.error(error);
     }
     task = new Task();
     _b = list;
     for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      (function() {
-        var filename = _b[_a];
-        if (isMedia(filename)) {
-          return task.add(filename, [fs.stat, path.join(dir, filename)]);
-        } else if (stat.isDirectory()) {
-          return (function(dir) {
-            return scanDirectory(dir, function() {
-              return watchDirectory(dir);
-            });
-          })(path.join(dir, filename));
-        }
-      })();
+      filename = _b[_a];
+      if (isMedia(filename)) {
+        task.add(filename, [fs.stat, path_m.join(dir, filename)]);
+      }
     }
     return task.run(function(filename, error, stat) {
       if (!task) {
         return cb();
       } else if (stat) {
-        return addToQueue(path.join(dir, filename), stat);
+        return stat.isDirectory() ? (function(dir) {
+          return scanDirectory(dir, function() {
+            return watchDirectory(dir);
+          });
+        })(path_m.join(dir, filename)) : addToQueue(path_m.join(dir, filename), stat);
       }
     });
   });

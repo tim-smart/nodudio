@@ -1,5 +1,6 @@
-var Base, redis;
+var Base, redis, server;
 redis = require('../redis');
+server = require('../server');
 Base = function(data) {
   this.data = data || {};
   return this;
@@ -18,6 +19,12 @@ Base.prototype.set = function(name, value) {
 };
 Base.prototype.exists = function(cb) {};
 Base.prototype.save = function(cb) {
-  return redis.saveModel(this, cb);
+  return redis.saveModel(this, function(error, model) {
+    if (error) {
+      return cb(error);
+    }
+    socket.broadcast("save:" + (model.name) + ":" + (model.id) + "|" + (JSON.stringify(model.data)));
+    return cb(null, model);
+  });
 };
 module.exports = Base;
