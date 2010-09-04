@@ -65,7 +65,7 @@ task 'build:client', 'Build client coffee', ->
   ], {
     type:     'coffee'
     wrap:     yes
-    compile:  yes
+    compile:  no
     compress: no
     watch:    no
   }
@@ -75,7 +75,7 @@ task 'build:client', 'Build client coffee', ->
     'assets/css'
   ], {
     type:     'css'
-    compile:  yes
+    compile:  no
     compress: no
     watch:    no
   }

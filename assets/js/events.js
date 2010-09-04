@@ -7,16 +7,18 @@ EventEmitter.prototype.emit = function emit() {
       name = args.shift();
 
   if (this.listeners[name]) {
-    utils.each(this.listeners[name], function (listener) {
-      listener.apply(null, args);
-    });
+    for (var i = 0, il = this.listeners[name].length; i < il; i++) {
+      this.listeners[name][i].apply(null, args);
+    }
   }
 
   return true;
 };
 
 EventEmitter.prototype.on = function addListener(name, fn) {
-  return this.listeners[name] = fn;
+  if (this.listeners[name]) this.listeners[name].push(fn);
+  else this.listeners[name] = [fn];
+  return this;
 };
 
 nodudio.EventEmitter = EventEmitter;

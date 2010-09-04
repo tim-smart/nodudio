@@ -39,11 +39,14 @@ exports.hDelete = ->
 exports.hSet = ->
   client.hset.apply client, arguments
 
-exports.keyExists = (key, cb) ->
-  client.exists key, cb
+exports.keyExists = (key, cb) -> client.exists key, cb
 
-exports.hKeyExists = (hash, key, cb) ->
-  client.hexists hash, 
+exports.hKeyExists = (hash, key, cb) -> client.hexists hash, key, cb
+
+exports.sCard = (key, cb) -> client.scard key, cb
+
+exports.getId = (type, cb) ->
+  client.incr "ids:#{type}", cb
 
 exports.saveModel = (model, cb) ->
   model_key = keys = null
@@ -57,17 +60,28 @@ exports.saveModel = (model, cb) ->
     keys      = Object.keys model.data
     for key in keys
       data.push key
-      data.push model.data[key]
+      data.push new Buffer model.data[key], 'utf8'
     client.hmset data, afterInsert
   afterInsert = (error, result) ->
     return cb error if error
-    client.sadd "collection:#{model.name}", model.id, ->
-    cb null, model
+    task = new Task
+      coll: [exports.addCollection, model.name, model.id]
+    string_id = model.stringId()
+    task.add 'link', [exports.addLink, model.name, model.stringId(), model.id] if string_id
+    task.run addedLinks
+  error = null
+  addedLinks = (task, error) ->
+    err = error if error
+    cb error, model unless task
 
   if model.id then insert null, model.id
   else
     is_new = yes
     client.incr "ids:#{model.name}", insert
+
+exports.updateModelKey = (model, key, cb) ->
+  return cb new Error 'id missing' unless model.id
+  client.hset "#{model.name}:#{model.id}", key, model.get(key), cb
 
 exports.getModel = (model, id, cb) ->
   return cb new Error 'id missing' if not id
@@ -100,6 +114,9 @@ exports.getLink = (type, id, cb) ->
 exports.deleteLink = (type, id, cb) ->
   client.hdel "link:#{type}", id, cb
 
+exports.deleteLinks = (type, cb) ->
+  client.del "link:#{type}", cb
+
 exports.linkExists = (type, id, cb) ->
   client.hexists "link:#{type}", id, cb
 
@@ -111,9 +128,33 @@ exports.getModelLinks = (model, type, cb) ->
   return cb new Error 'id missing' unless model.id
   client.smembers "link:#{model.name}:#{model.id}:#{type}", cb
 
+exports.deleteModelLink = (parent, id, type, field, cb) ->
+  client.srem "link:#{parent}:#{id}:#{type}", field, cb
+
 exports.deleteModelLinks = (model, type, cb) ->
   return cb new Error 'id missing' unless model.id
   client.del "link:#{model.name}:#{model.id}:#{type}", cb
 
 exports.getCollection = (type, cb) ->
   client.smembers "collection:#{type}", cb
+
+exports.addCollection = (type, id, cb) ->
+  client.sadd "collection:#{type}", id, cb
+
+exports.getCache = (resource, id, action, cb) ->
+  key = cacheKey resource, id, action
+  client.get key, cb
+
+exports.setCache = (resource, id, action, result, cb) ->
+  key = cacheKey resource, id, action
+  client.set key, new Buffer(JSON.stringify(result)), cb
+
+exports.expireCache = (resource, id, action, cb) ->
+  key = cacheKey resource, id, action
+  client.del key, cb
+
+cacheKey = (resource, id, action) ->
+  key = ['cache', resource]
+  key.push id     if id
+  key.push action if action
+  key.join ':'

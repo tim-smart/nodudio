@@ -1,4 +1,4 @@
-var Task, callbacks, client, config, redis, server, spawn;
+var Task, cacheKey, callbacks, client, config, redis, server, spawn;
 redis = require('../deps/redis-client/lib/redis-client');
 config = require('./config');
 spawn = require('child_process').spawn;
@@ -48,10 +48,16 @@ exports.keyExists = function(key, cb) {
   return client.exists(key, cb);
 };
 exports.hKeyExists = function(hash, key, cb) {
-  return client.hexists(hash);
+  return client.hexists(hash, key, cb);
+};
+exports.sCard = function(key, cb) {
+  return client.scard(key, cb);
+};
+exports.getId = function(type, cb) {
+  return client.incr("ids:" + (type), cb);
 };
 exports.saveModel = function(model, cb) {
-  var afterInsert, insert, is_new, keys, model_key;
+  var addedLinks, afterInsert, error, insert, is_new, keys, model_key;
   model_key = (keys = null);
   is_new = false;
   insert = function(error, id) {
@@ -67,16 +73,33 @@ exports.saveModel = function(model, cb) {
     for (_a = 0, _c = _b.length; _a < _c; _a++) {
       key = _b[_a];
       data.push(key);
-      data.push(model.data[key]);
+      data.push(new Buffer(model.data[key], 'utf8'));
     }
     return client.hmset(data, afterInsert);
   };
   afterInsert = function(error, result) {
+    var string_id, task;
     if (error) {
       return cb(error);
     }
-    client.sadd("collection:" + (model.name), model.id, function() {});
-    return cb(null, model);
+    task = new Task({
+      coll: [exports.addCollection, model.name, model.id]
+    });
+    string_id = model.stringId();
+    if (string_id) {
+      task.add('link', [exports.addLink, model.name, model.stringId(), model.id]);
+    }
+    return task.run(addedLinks);
+  };
+  error = null;
+  addedLinks = function(task, error) {
+    var err;
+    if (error) {
+      err = error;
+    }
+    if (!(task)) {
+      return cb(error, model);
+    }
   };
   if (model.id) {
     return insert(null, model.id);
@@ -84,6 +107,12 @@ exports.saveModel = function(model, cb) {
     is_new = true;
     return client.incr("ids:" + (model.name), insert);
   }
+};
+exports.updateModelKey = function(model, key, cb) {
+  if (!(model.id)) {
+    return cb(new Error('id missing'));
+  }
+  return client.hset("" + (model.name) + ":" + (model.id), key, model.get(key), cb);
 };
 exports.getModel = function(model, id, cb) {
   var props;
@@ -137,6 +166,9 @@ exports.getLink = function(type, id, cb) {
 exports.deleteLink = function(type, id, cb) {
   return client.hdel("link:" + (type), id, cb);
 };
+exports.deleteLinks = function(type, cb) {
+  return client.del("link:" + (type), cb);
+};
 exports.linkExists = function(type, id, cb) {
   return client.hexists("link:" + (type), id, cb);
 };
@@ -152,6 +184,9 @@ exports.getModelLinks = function(model, type, cb) {
   }
   return client.smembers("link:" + (model.name) + ":" + (model.id) + ":" + (type), cb);
 };
+exports.deleteModelLink = function(parent, id, type, field, cb) {
+  return client.srem("link:" + (parent) + ":" + (id) + ":" + (type), field, cb);
+};
 exports.deleteModelLinks = function(model, type, cb) {
   if (!(model.id)) {
     return cb(new Error('id missing'));
@@ -160,4 +195,33 @@ exports.deleteModelLinks = function(model, type, cb) {
 };
 exports.getCollection = function(type, cb) {
   return client.smembers("collection:" + (type), cb);
+};
+exports.addCollection = function(type, id, cb) {
+  return client.sadd("collection:" + (type), id, cb);
+};
+exports.getCache = function(resource, id, action, cb) {
+  var key;
+  key = cacheKey(resource, id, action);
+  return client.get(key, cb);
+};
+exports.setCache = function(resource, id, action, result, cb) {
+  var key;
+  key = cacheKey(resource, id, action);
+  return client.set(key, new Buffer(JSON.stringify(result)), cb);
+};
+exports.expireCache = function(resource, id, action, cb) {
+  var key;
+  key = cacheKey(resource, id, action);
+  return client.del(key, cb);
+};
+cacheKey = function(resource, id, action) {
+  var key;
+  key = ['cache', resource];
+  if (id) {
+    key.push(id);
+  }
+  if (action) {
+    key.push(action);
+  }
+  return key.join(':');
 };

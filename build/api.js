@@ -1,11 +1,6 @@
-var RELATIONS, Task, not_found, redis;
+var Task, not_found, redis;
 redis = require('./redis');
 Task = require('parallel').Task;
-RELATIONS = {
-  song: [],
-  artist: ['song', 'album'],
-  album: ['song']
-};
 module.exports = {
   get: function(resource, id, action, cb) {
     var model;
@@ -57,7 +52,7 @@ module.exports = {
         return cb(null, result);
       }
       result.set('_id', id);
-      return action && ~RELATIONS[resource].indexOf(action) ? redis.getModelLinks(result, action, function(error, results) {
+      return action && result.has_many.indexOf(action) ? redis.getModelLinks(result, action, function(error, results) {
         var _a, _b, _c, id, ret, task;
         if (error) {
           return cb(error);

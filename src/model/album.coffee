@@ -8,4 +8,7 @@ class Album extends Base
     'artist_id'
   ]
 
+  belongs_to: ['artist']
+  has_many:   ['song']
+
 module.exports = Album

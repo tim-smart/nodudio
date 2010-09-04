@@ -54,13 +54,16 @@ handleResult = function(result) {
       _a = []; _c = result;
       for (_b = 0, _d = _c.length; _b < _d; _b++) {
         model = _c[_b];
-        _a.push(model.data);
+        _a.push((function() {
+          model.data.path = undefined;
+          return model.data;
+        })());
       }
       return _a;
     })();
-    result.path = undefined;
     return result;
   } else if (result.data) {
+    model.data.path = undefined;
     return result.data;
   } else {
     return result;

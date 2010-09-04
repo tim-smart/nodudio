@@ -1,5 +1,18 @@
-fs   = require 'fs'
-path = require 'path'
+fs     = require 'fs'
+path   = require 'path'
+crypto = require 'crypto'
+
+exports.idFromString = (string) ->
+  string.trim().toLowerCase().replace /[^a-z0-9]+/ig, '-'
+
+exports.md5 = (string) ->
+  crypto.createHash('md5').update(string).digest('hex')
+
+exports.base64Encode = (string) ->
+  new Buffer(string, 'utf8').toString('base64')
+
+exports.base64Decode = (string) ->
+  new Buffer(string, 'base64').toString('utf8')
 
 # Iterate over files
 directoryWalker = exports.directoryWalker = (dir, callback, maxLevels, currentLevel, fromRoot) ->

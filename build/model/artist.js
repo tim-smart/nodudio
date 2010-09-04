@@ -14,4 +14,5 @@ Artist = function() {
 __extends(Artist, Base);
 Artist.prototype.name = 'artist';
 Artist.prototype.properties = ['name'];
+Artist.prototype.has_many = ['album', 'song'];
 module.exports = Artist;

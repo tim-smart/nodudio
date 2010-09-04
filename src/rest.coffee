@@ -4,27 +4,36 @@ api   = require './api'
 fs    = require 'fs'
 pathm = require 'path'
 
+cache = {}
+
 module.exports = ->
   (request, response, next, path) ->
     [resource, id, action] = path.split '/'
-    if resource is 'song' and action is 'download'
-      api.get 'song', id, null, (error, song) ->
-        return respondWith404 request, response if error or not song.id
-        sendFile request, response, song.get 'path'
-    else
-      api.get resource, id, action, (error, result) ->
-        return respondWith404 request, response if error
-        handleResult request, response, result
+    redis.getCache resource, id, action, (error, cache) ->
+      if error or not cache
+        if resource is 'song' and action is 'download'
+          api.get 'song', id, null, (error, song) ->
+            return respondWith404 request, response if error or not song.id
+            sendFile request, response, song.get 'path'
+        else
+          api.get resource, id, action, (error, result) ->
+            return respondWith404 request, response if error
+            result = handleResult request, response, result
+            redis.setCache resource, id, action, result, ->
+            response.sendJson 200, result
+      else
+        response.sendHeaders
+          'Content-Type': 'application/json'
+        response.end cache
 
 handleResult = (request, response, result) ->
   if Buffer.isBuffer result
     result.toString()
   else if Array.isArray result
-    result      = model.data for model in result
+    result      = model.toObject() for model in result
     result.path = undefined
-  else if result.data then result = result.data
-  response.sendJson 200,
-    result: result
+    result
+  else if result.toObject then result.toObject()
 
 sendFile = (request, response, path) ->
   fs.stat path, (error, stat) ->

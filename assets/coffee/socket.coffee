@@ -31,4 +31,7 @@ socket.on 'message', (message) ->
           callbacks[message[0]] = undefined
           callback data
   catch error
-    console.error(error) if console and console.error
+    console.log(error) if console and console.log
+
+emitter.on 'save', (model, id, data) ->
+  console.log(model, id, data)

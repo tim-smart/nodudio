@@ -1,11 +1,6 @@
 redis = require './redis'
 Task  = require('parallel').Task
 
-RELATIONS =
-  song:   []
-  artist: ['song', 'album']
-  album:  ['song']
-
 module.exports =
   get: (resource, id, action, cb) ->
     return cb not_found unless resource
@@ -41,7 +36,7 @@ module.exports =
         return cb error        if error
         return cb null, result unless result.id
         result.set '_id', id
-        if action and ~RELATIONS[resource].indexOf action
+        if action and result.has_many.indexOf action
           redis.getModelLinks result, action, (error, results) ->
             return cb error if error
             model = require "./model/#{action}"

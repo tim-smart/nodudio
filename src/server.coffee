@@ -50,8 +50,11 @@ handleResult = (result) ->
   if Buffer.isBuffer result
     result.toString()
   else if Array.isArray result
-    result      = model.data for model in result
-    result.path = undefined
+    result = for model in result
+      model.data.path = undefined
+      model.data
     result
-  else if result.data then result.data
+  else if result.data
+    model.data.path = undefined
+    result.data
   else result

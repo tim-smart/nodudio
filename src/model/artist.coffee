@@ -7,4 +7,6 @@ class Artist extends Base
     'name'
   ]
 
+  has_many: ['album', 'song']
+
 module.exports = Artist
