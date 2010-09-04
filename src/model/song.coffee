@@ -21,7 +21,7 @@ class Song extends Base
   remove: (cb) ->
     super (error) =>
       return cb error if error
-      path_e = utils.base64Encode(@data.path)
+      path_e = encodeURI(@data.path)
       redis.deleteLink 'path', path_e, cb
 
   save: (cb) ->
@@ -29,7 +29,7 @@ class Song extends Base
       return cb error if error
       path = song.data.path
       if not path then cb null, this
-      else redis.addLink 'path', utils.base64Encode(path), @id, (error) ->
+      else redis.addLink 'path', encodeURI(path), @id, (error) ->
         return cb error if error
         cb null, this
 

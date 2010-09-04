@@ -29,7 +29,7 @@ Song.prototype.remove = function(cb) {
     if (error) {
       return cb(error);
     }
-    path_e = utils.base64Encode(this.data.path);
+    path_e = encodeURI(this.data.path);
     return redis.deleteLink('path', path_e, cb);
   }, this));
 };
@@ -40,7 +40,7 @@ Song.prototype.save = function(cb) {
       return cb(error);
     }
     path = song.data.path;
-    return !path ? cb(null, this) : redis.addLink('path', utils.base64Encode(path), this.id, function(error) {
+    return !path ? cb(null, this) : redis.addLink('path', encodeURI(path), this.id, function(error) {
       if (error) {
         return cb(error);
       }

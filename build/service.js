@@ -110,7 +110,7 @@ queueUpdated = function() {
   }
   working = true;
   path = queue.pop();
-  path_e = utils.base64Encode(path);
+  path_e = encodeURI(path);
   tags = (song = null);
   redis.getLink('path', path_e, function(error, data) {
     if (error) {
@@ -340,6 +340,9 @@ cleanIndex = (exports.cleanIndex = function(cb) {
     if (error) {
       return cb(error);
     }
+    if (!(data)) {
+      return cb();
+    }
     fn = function(id, path_e, path) {
       return function(next) {
         var pathExists;
@@ -364,7 +367,7 @@ cleanIndex = (exports.cleanIndex = function(cb) {
     for (path_e in _a) {
       if (!__hasProp.call(_a, path_e)) continue;
       song_id = _a[path_e];
-      task.add(fn(song_id.toString(), path_e, utils.base64Decode(path_e)));
+      task.add(fn(song_id.toString(), path_e, decodeURI(path_e)));
     }
     return task.run(function() {
       return redis.getCollection('song', findMissingSongs);

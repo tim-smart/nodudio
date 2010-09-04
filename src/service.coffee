@@ -70,7 +70,7 @@ queueUpdated = ->
 
   working = yes
   path    = queue.pop()
-  path_e  = utils.base64Encode path
+  path_e  = encodeURI path
   tags    = song = null
   redis.getLink 'path', path_e, (error, data) ->
     return if error
@@ -216,6 +216,7 @@ cleanIndex = exports.cleanIndex = (cb) ->
   # Remove bad paths
   redis.client.hgetall 'link:path', (error, data) ->
     return cb error if error
+    return cb()     unless data
     fn = (id, path_e, path) ->
       (next) ->
         pathExists = (error, stat) ->
@@ -229,7 +230,7 @@ cleanIndex = exports.cleanIndex = (cb) ->
           else fs.stat path, pathExists
     task = new Seq
     for path_e, song_id of data
-      task.add fn(song_id.toString(), path_e, utils.base64Decode(path_e))
+      task.add fn(song_id.toString(), path_e, decodeURI(path_e))
     task.run ->
       redis.getCollection 'song', findMissingSongs
 
