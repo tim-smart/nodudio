@@ -1,5 +1,5 @@
 var Task, cacheKey, callbacks, client, config, redis, server, spawn;
-redis = require('../deps/redis-client/lib/redis-client');
+redis = require('../deps/redis-client');
 config = require('./config');
 spawn = require('child_process').spawn;
 Task = require('parallel').Task;
@@ -168,6 +168,9 @@ exports.deleteModelField = function(model, field, cb) {
 };
 exports.addLink = function(type, from, to, cb) {
   return client.hset("link:" + (type), from, to, cb);
+};
+exports.addLinkNx = function(type, from, to, cb) {
+  return client.hsetnx("link:" + (type), from, to, cb);
 };
 exports.getLink = function(type, id, cb) {
   return client.hget("link:" + (type), id, cb);

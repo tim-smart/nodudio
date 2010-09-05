@@ -20,17 +20,17 @@ class Indexer extends process.EventEmitter
     @working = no
     @queue   = []
     @last    = no
-    @on 'walk:file',      @onFile
-    @on 'queue:update',   @onQueueUpdate
-    @on 'queue:item',     @onQueueItem
-    @on 'queue:next',     @onQueueNext
-    @on 'song:found',     @onSongFound
-    @on 'song:move',      @onSongMove
-    @on 'song:valid',     @onSongValid
-    @on 'song:tagged',    @onSongTagged
-    @on 'artist:saved',   @onArtistSaved
-    @on 'album:saved',    @onAlbumSaved
-    @on 'linked',         @onLinked
+    @on 'walk:file',    @onFile
+    @on 'queue:update', @onQueueUpdate
+    @on 'queue:item',   @onQueueItem
+    @on 'queue:next',   @onQueueNext
+    @on 'song:found',   @onSongFound
+    @on 'song:move',    @onSongMove
+    @on 'song:valid',   @onSongValid
+    @on 'song:tagged',  @onSongTagged
+    @on 'artist:saved', @onArtistSaved
+    @on 'album:saved',  @onAlbumSaved
+    @on 'linked',       @onLinked
 
   db: redis
 
@@ -73,9 +73,9 @@ class Indexer extends process.EventEmitter
   onQueueItem: (file_path, stat) ->
     $      = this
     path_e = encodeURI file_path
-    @db.getLink 'path', path_e, (error, song_id) ->
+    @db.addLinkNx 'path', path_e, 0, (error, avail) ->
       return $.handleError error if error
-      return $.emit 'queue:next' if song_id
+      return $.emit 'queue:next' unless avail
       song = new Song path: file_path
       $.emit 'song:found', song, path_e
 

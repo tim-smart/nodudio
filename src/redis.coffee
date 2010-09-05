@@ -1,4 +1,4 @@
-redis  = require '../deps/redis-client/lib/redis-client'
+redis  = require '../deps/redis-client'
 config = require './config'
 spawn  = require('child_process').spawn
 Task   = require('parallel').Task
@@ -114,6 +114,9 @@ exports.deleteModelField = (model, field, cb) ->
 
 exports.addLink = (type, from, to, cb) ->
   client.hset "link:#{type}", from, to, cb
+
+exports.addLinkNx = (type, from, to, cb) ->
+  client.hsetnx "link:#{type}", from, to, cb
 
 exports.getLink = (type, id, cb) ->
   client.hget "link:#{type}", id, cb

@@ -93,12 +93,12 @@ Indexer.prototype.onQueueItem = function(file_path, stat) {
   var $, path_e;
   $ = this;
   path_e = encodeURI(file_path);
-  return this.db.getLink('path', path_e, function(error, song_id) {
+  return this.db.addLinkNx('path', path_e, 0, function(error, avail) {
     var song;
     if (error) {
       return $.handleError(error);
     }
-    if (song_id) {
+    if (!(avail)) {
       return $.emit('queue:next');
     }
     song = new Song({
