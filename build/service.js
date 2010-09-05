@@ -276,7 +276,17 @@ watchDirectory = function(dir) {
   }
   dirs.push(dir);
   return fs.watchFile(dir, function(current, previous) {
-    return new Indexer(dir).run();
+    var indexer;
+    console.log("[Service] Scanning: " + (dir));
+    indexer = new Indexer(dir);
+    indexer.on('walk:directory', watchDirectory);
+    indexer.on('song:saved', function(song) {
+      return console.log("[Index] Added: " + (song.get('name')) + " - " + (song.get('artist_name')) + " (" + (song.get('album_name')) + ")");
+    });
+    indexer.on('complete', function() {
+      return console.log("[Service] Finished scanning: " + (dir));
+    });
+    return indexer.run();
   });
 };
 cleanIndex = (exports.cleanIndex = function(cb) {

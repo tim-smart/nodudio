@@ -186,7 +186,14 @@ watchDirectory = (dir) ->
   return if dirs.indexOf(dir) isnt -1
   dirs.push dir
   fs.watchFile dir, (current, previous) ->
-    new Indexer(dir).run()
+    console.log "[Service] Scanning: #{dir}"
+    indexer = new Indexer dir
+    indexer.on 'walk:directory', watchDirectory
+    indexer.on 'song:saved', (song) ->
+      console.log "[Index] Added: #{song.get 'name'} - #{song.get 'artist_name'} (#{song.get 'album_name'})"
+    indexer.on 'complete', ->
+      console.log "[Service] Finished scanning: #{dir}"
+    indexer.run()
 
 # Clean up, cleanup, everybody everywhere
 cleanIndex = exports.cleanIndex = (cb) ->
