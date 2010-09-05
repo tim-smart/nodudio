@@ -108,11 +108,17 @@ exports.saveModel = function(model, cb) {
     return client.incr("ids:" + (model.name), insert);
   }
 };
-exports.updateModelKey = function(model, key, cb) {
+exports.updateModelKey = (exports.setModelKey = function(model, key, cb) {
   if (!(model.id)) {
     return cb(new Error('id missing'));
   }
   return client.hset("" + (model.name) + ":" + (model.id), key, model.get(key), cb);
+});
+exports.getModelKey = function(model, key, cb) {
+  if (!(model.id)) {
+    return cb(new Error('id missing'));
+  }
+  return client.hget("" + (model.name) + ":" + (model.id), key, cb);
 };
 exports.getModel = function(model, id, cb) {
   var props;
@@ -139,6 +145,9 @@ exports.getModel = function(model, id, cb) {
     model.id = id;
     return cb(null, model);
   });
+};
+exports.modelExists = function(type, id, cb) {
+  return client.exists("" + (type) + ":" + (id), cb);
 };
 exports.deleteModel = function(type, id, cb) {
   if (!(id)) {

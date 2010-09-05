@@ -14,85 +14,103 @@ crypto = require 'crypto'
 
 idFromString = utils.idFromString
 
-saveArtist = (song, tags, cb) ->
-  artist = new Artist
-    name: song.get 'artist_name'
-  redis.getLink 'artist', artist.stringId(), (error, result) ->
-    return cb error if error
-    if result
-      artist.id = result.toString()
-      done()
-    else artist.save done
-  done = (error) ->
-    return cb error if error
-    song.set('artist_id', artist.id)
-    saveAlbum artist, song, tags, cb
+class Indexer extends process.EventEmitter
+  constructor: (dir) ->
+    @dir     = dir
+    @working = no
+    @queue   = []
+    @last    = no
+    @on 'walk:file',      @onFile
+    @on 'queue:update',   @onQueueUpdate
+    @on 'queue:item',     @onQueueItem
+    @on 'queue:next',     @onQueueNext
+    @on 'song:found',     @onSongFound
+    @on 'song:move',      @onSongMove
+    @on 'song:valid',     @onSongValid
+    @on 'song:tagged',    @onSongTagged
+    @on 'artist:saved',   @onArtistSaved
+    @on 'album:saved',    @onAlbumSaved
+    @on 'linked',         @onLinked
 
-saveAlbum = (artist, song, tags, cb) ->
-  album = new Album
-    name:        song.get 'album_name'
-    artist_id:   artist.id
-    artist_name: artist.get 'name'
-  year = tags.get('year') if tags
-  album.set('year', year) if year
-  redis.getLink "album", album.stringId(), (error, link) ->
-    return cb error if error
-    if link
-      album.id = link.toString()
-      saved()
-    else album.save saved
-  saved = (error) ->
-    return cb error if error
-    song.set 'album_id', album.id
-    link_task = new Task
-      artist:  [artist.linkTo, album]
-      artist2: [artist.linkTo, song]
-      album:   [album.linkTo, song]
-    error = null
-    link_task.run (task, err) ->
-      error = err if err
-      if not task
-        return cb error if error
-        cb null, song
+  db: redis
 
-working         = no
-queue           = []
-queue_callbacks = []
-addToQueue = (filename, stat) ->
-  if queue.indexOf(filename) is -1
-    queue.unshift  filename
-  queueUpdated()
-queueUpdated = ->
-  return if working
-  if queue.length is 0
-    callback() for callback in queue_callbacks
-    return queue_callbacks = []
+  run: ->
+    $ = this
+    new utils.DirectoryWalker(@dir).run (file, file_path, stat, dir) ->
+      if not file
+        $.last = yes
+        return $.emit 'queue:update'
+      return $.emit('walk:directory', file_path, this) if dir
+      $.emit 'walk:file', file_path, this
 
-  working = yes
-  path    = queue.pop()
-  path_e  = encodeURI path
-  tags    = song = null
-  redis.getLink 'path', path_e, (error, data) ->
-    return if error
-    if data then redis.getModel new Song, data.toString(), populate
-    else populate null, new Song
-  populate = (error, song_model) ->
-    return next() if error
-    song = song_model
-    if song.id then next()
-    else fs.readFile path, parseSong
-  parseSong = (error, buffer) ->
-    if error
-      return redis.deleteLink 'path', path_e, -> next()
-    tags = new ID3 buffer
-    song.set 'md5', utils.md5 buffer
-    redis.getLink 'song', song.stringId(), setTags
-  setTags = (error, result) ->
-    return next() if error
-    if result
-      redis.getModel new Song, result.toString(), updatePath
-      return next()
-    tags.parse()
+  onFile: (file, stat) ->
+    if @validate file
+      @queue.unshift [file, stat]
+      @emit 'queue:update'
+
+  validate: (filename) ->
+    config.filetypes.indexOf(path_m.extname filename) isnt -1
+
+  handleError: (error) ->
+    $.emit 'queue:next'
+    $.emit 'error', error
+
+  onQueueUpdate: ->
+    return if @working
+    if @queue.length is 0
+      if @last
+        @last = no
+        @emit 'complete'
+      return
+    @working     = yes
+    [file, stat] = @queue.pop()
+    @emit 'queue:item', file, stat
+
+  onQueueNext: ->
+    @working = no
+    @emit 'queue:update'
+
+  onQueueItem: (file_path, stat) ->
+    $      = this
+    path_e = encodeURI file_path
+    @db.getLink 'path', path_e, (error, song_id) ->
+      return $.handleError error if error
+      return $.emit 'queue:next' if song_id
+      song = new Song path: file_path
+      $.emit 'song:found', song, path_e
+
+  onSongFound: (song, path_e) ->
+    $ = this
+    fs.readFile song.get('path'), (error, buffer) ->
+      return $.handleError error if error
+      song.set 'md5', utils.md5 buffer
+      $.db.getLink 'song', song.stringId(), (error, song_id) ->
+        return $.handleError error if error
+        # Same song different path?
+        if song_id
+          song.id = song_id.toString()
+          $.emit 'song:move', song, path_e, buffer
+        else
+          tags = new ID3 buffer
+          tags.parse()
+          $.emit 'song:valid', song, tags
+
+  onSongMove: (song, path_e, buffer) ->
+    $ = this
+    @db.getModelKey song, 'path', (error, path) ->
+      return $.handleError error if error
+      fs.stat path.toString(), (error, stat) ->
+        if error
+          task = new Task
+            song: [$.db.setModelKey, song, 'path']
+            path: [$.db.addLink 'path', path_e, song.id]
+          task.run (key, error) ->
+            $.emit 'error', error if error
+            $.emit 'queue:next'   unless key
+        else $.emit 'queue:next'
+
+  onSongValid: (song, tags) ->
+    $ = this
     song.set 'name',        (tags.get 'title')  or 'Unknown'
     song.set 'artist_name', (tags.get 'artist') or 'Unknown'
     song.set 'album_name',  (tags.get 'album')  or 'Unknown'
@@ -100,81 +118,78 @@ queueUpdated = ->
     song.set 'track',       (tags.get 'track')  or '0'
     song.set 'track',       song.get('track').toString().split('/')[0]
     song.set 'rating',      song.get 'rating', 0
-    song.set 'path',        path
-    redis.getId('song', saveSong)
-    next()
-  saveSong = (error, song_id) ->
-    return next() if error
-    song.id = song_id.toString()
-    saveArtist song, tags, done
-  updatePath = (error, song) ->
-    return if error
-    song.set 'path', path
-    task = new Task
-      song: [redis.updateModelKey, song, 'path']
-      path: [redis.addLink, 'path', path_e, song.id]
-    task.run ->
-  done = (error) ->
-    if error then song.remove ->
-    else
-      console.log "[Index] Added: #{song.get 'name'} - #{song.get 'artist_name'} (#{song.get 'album_name'})"
-      song.save ->
+    @db.getId 'song', (error, song_id) ->
+      return $.handleError error if error
+      return $.emit 'queue:next' unless song_id
+      song.id = song_id.toString()
+      $.emit 'song:tagged', song, tags
 
-next = ->
-  working = no
-  queueUpdated()
+  onSongTagged: (song, tags) ->
+    $ = this
+    artist = new Artist
+      name: song.get 'artist_name'
+    @db.getLink 'artist', artist.stringId(), (error, artist_id) ->
+      return $.handleError error if error
+      if artist_id
+        artist.id = artist_id.toString()
+        return $.emit 'artist:saved', artist, song, tags
+      artist.save (error) ->
+        return $.handleError error if error
+        $.emit 'artist:saved', artist, song, tags
+
+  onArtistSaved: (artist, song, tags) ->
+    $ = this
+    song.set 'artist_id', artist.id
+    album = new Album
+      name:        song.get 'album_name'
+      artist_id:   artist.id
+      artist_name: artist.get 'name'
+    year = tags.get('year')
+    album.set 'year', year if +year
+    @db.getLink 'album', album.stringId(), (error, album_id) ->
+      return $.handleError error if error
+      if album_id
+        album.id = album_id.toString()
+        return $.emit 'album:saved', album, artist, song
+      album.save (error) ->
+        return $.handleError error if error
+        $.emit 'album:saved', album, artist, song
+
+  onAlbumSaved: (album, artist, song) ->
+    $ = this
+    song.set 'album_id', album.id
+    task = new Task
+      artist:  [artist.linkTo, album]
+      artist2: [artist.linkTo, song]
+      album:   [album.linkTo, song]
+    err = no
+    task.run (key, error) ->
+      if error
+        err = yes
+        $.emit 'error', error    if error
+      $.emit 'linked', err, song unless key
+
+  onLinked: (error, song) ->
+    $ = this
+    if error
+      song.remove (error) ->
+        return $.handleError error if error
+        $.emit 'queue:next'
+    else
+      song.save (error) ->
+        return $.handleError error if error
+        $.emit 'song:saved', song
+        $.emit 'queue:next'
 
 dirs = []
 watchDirectory = (dir) ->
   return if dirs.indexOf(dir) isnt -1
   dirs.push dir
   fs.watchFile dir, (current, previous) ->
-    scanDirectory dir
-scanDirectory = (dir, cb) ->
-  fs.readdir dir, (error, list) ->
-    return if error
-    task = new Task
-    for filename in list
-      if isMedia filename
-        task.add filename, [fs.stat, path_m.join dir, filename]
-    task.run (filename, error, stat) ->
-      if not task then cb()
-      else if stat
-        if stat.isDirectory()
-          ((dir) -> scanDirectory dir, -> watchDirectory dir)(path_m.join dir, filename)
-        else addToQueue path_m.join(dir, filename), stat
-
-isMedia = (filename) ->
-  config.filetypes.indexOf(path_m.extname filename) isnt -1
-fullScan = (cb) ->
-  queue_callbacks.push cb if cb
-  watchDirectory config.music_dir
-  utils.directoryWalker config.music_dir, (filename, dirname, path) ->
-    return watchDirectory path if @isDirectory()
-    if isMedia filename then addToQueue path, this
+    new Indexer(dir).run()
 
 # Clean up, cleanup, everybody everywhere
 cleanIndex = exports.cleanIndex = (cb) ->
-  # TODO: Find broken paths, remove un-used albums
-  # and artists
-  findMissingSongs = (error, songs) ->
-    return cb error if error
-    task      = new Task
-    song_task = new Task
-    for id in songs
-      id = id.toString()
-      task.add id, [redis.getModel, new Song, id]
-    task.run (id, err, song) ->
-      if not id
-        song_task.run (id) ->
-          redis.getCollection 'album', removeEmptyAlbums unless id
-      else if song then song_task.add id, [processSong, song]
-  processSong = (song, cb) ->
-    fs.stat song.get('path'), (error, stat) ->
-      if error and song.id
-        song.remove cb
-      else cb()
-
   removeEmptyAlbums = (error, albums) ->
     return cb error if error
     remove_task = new Task
@@ -206,8 +221,7 @@ cleanIndex = exports.cleanIndex = (cb) ->
       if not id
         get_task.run (id, error, artist) ->
           if not id 
-            remove_task.run (task) ->
-              cb() unless id
+            remove_task.run (task) -> cb() unless id
           else if artist and artist.id
             remove_task.add id, [artist.remove]
       else if songs and songs.length is 0
@@ -217,22 +231,17 @@ cleanIndex = exports.cleanIndex = (cb) ->
   redis.client.hgetall 'link:path', (error, data) ->
     return cb error if error
     return cb()     unless data
-    fn = (id, path_e, path) ->
-      (next) ->
-        pathExists = (error, stat) ->
-          if error
-            redis.deleteLink 'path', path_e, ->
-          next()
-        redis.keyExists "song:#{id}", (error, exists) ->
-          if error or not exists
-            redis.deleteLink 'path', path_e, ->
-            next()
-          else fs.stat path, pathExists
     task = new Seq
-    for path_e, song_id of data
-      task.add fn(song_id.toString(), path_e, decodeURI(path_e))
+    Object.keys(data).forEach (path_e) ->
+      path = decodeURI path_e
+      task.add (next) ->
+        fs.stat path, (error, stat) ->
+          if error
+            redis.deletelink 'path', path_e, ->
+              next()
+          else next()
     task.run ->
-      redis.getCollection 'song', findMissingSongs
+      redis.getCollection 'album', removeEmptyAlbums
 
 # Do a full scan every 20 minutes and on startup
 serviceTask = ->
@@ -240,7 +249,13 @@ serviceTask = ->
   cleanIndex ->
     console.log '[Service] Finished cleaning index.'
     console.log '[Service] Performing index.'
-    fullScan()
+    indexer = new Indexer config.music_dir
+    indexer.on 'walk:directory', watchDirectory
+    indexer.on 'song:saved', (song) ->
+      console.log "[Index] Added: #{song.get 'name'} - #{song.get 'artist_name'} (#{song.get 'album_name'})"
+    indexer.on 'complete', ->
+      console.log '[Service] Finished indexing.'
+    indexer.run()
 redis.onLoad serviceTask
 setInterval serviceTask, config.service_interval * 60 * 1000
 

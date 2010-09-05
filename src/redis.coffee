@@ -79,9 +79,13 @@ exports.saveModel = (model, cb) ->
     is_new = yes
     client.incr "ids:#{model.name}", insert
 
-exports.updateModelKey = (model, key, cb) ->
+exports.updateModelKey = exports.setModelKey = (model, key, cb) ->
   return cb new Error 'id missing' unless model.id
   client.hset "#{model.name}:#{model.id}", key, model.get(key), cb
+
+exports.getModelKey = (model, key, cb) ->
+  return cb new Error 'id missing' unless model.id
+  client.hget "#{model.name}:#{model.id}", key, cb
 
 exports.getModel = (model, id, cb) ->
   return cb new Error 'id missing' if not id
@@ -94,6 +98,9 @@ exports.getModel = (model, id, cb) ->
     return cb null, model if Object.keys(model.data).length is 0
     model.id = id
     cb null, model
+
+exports.modelExists = (type, id, cb) ->
+  client.exists "#{type}:#{id}", cb
 
 exports.deleteModel = (type, id, cb) ->
   return cb new Error 'id missing' unless id

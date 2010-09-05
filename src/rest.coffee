@@ -1,15 +1,13 @@
-sys   = require 'sys'
 redis = require './redis'
 api   = require './api'
 fs    = require 'fs'
 pathm = require 'path'
 
-cache = {}
-
 module.exports = ->
   (request, response, next, path) ->
     [resource, id, action] = path.split '/'
     redis.getCache resource, id, action, (error, cache) ->
+      console.log !!cache
       if error or not cache
         if resource is 'song' and action is 'download'
           api.get 'song', id, null, (error, song) ->

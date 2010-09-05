@@ -1,10 +1,8 @@
-var api, cache, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders, sys;
-sys = require('sys');
+var api, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders;
 redis = require('./redis');
 api = require('./api');
 fs = require('fs');
 pathm = require('path');
-cache = {};
 module.exports = function() {
   return function(request, response, next, path) {
     var _a, action, id, resource;
@@ -13,6 +11,7 @@ module.exports = function() {
     id = _a[1];
     action = _a[2];
     return redis.getCache(resource, id, action, function(error, cache) {
+      console.log(!!cache);
       if (error || !cache) {
         return resource === 'song' && action === 'download' ? api.get('song', id, null, function(error, song) {
           if (error || !song.id) {
