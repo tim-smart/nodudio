@@ -44,7 +44,7 @@ nodudio.EventEmitter = EventEmitter;
       return emitter.emit('message', event.data);
     };
     return (emitter._ws.onclose = function() {
-      return createWebsocket();
+      return setTimeout(createWebsocket, 20000);
     });
   };
   createWebsocket();

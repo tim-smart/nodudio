@@ -8,7 +8,7 @@ createWebsocket = ->
   emitter._ws.onmessage = (event) ->
     emitter.emit 'message', event.data
   emitter._ws.onclose = ->
-    createWebsocket()
+    setTimeout createWebsocket, 20000
 
 createWebsocket()
 
