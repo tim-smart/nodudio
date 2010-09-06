@@ -12,26 +12,30 @@ module.exports = function() {
     resource = _a[0];
     id = _a[1];
     action = _a[2];
-    cache_key = utils.makeCacheKey(resource, id, action);
-    if (!api.cache[cache_key]) {
-      return resource === 'song' && action === 'download' ? api.get('song', id, null, function(error, song) {
+    if (resource === 'song' && action === 'download') {
+      return api.get('song', id, null, function(error, song) {
         if (error || !song.id) {
           return respondWith404(request, response);
         }
         return sendFile(request, response, song.get('path'));
-      }) : api.get(resource, id, action, function(error, result) {
-        if (error) {
-          return respondWith404(request, response);
-        }
-        result = handleResult(request, response, result);
-        api.cache[cache_key] = new Buffer(JSON.stringify(result));
-        return response.sendJson(200, result);
       });
     } else {
-      response.sendHeaders({
-        'Content-Type': 'application/json'
-      });
-      return response.end(api.cache[cache_key]);
+      cache_key = utils.makeCacheKey(resource, id, action);
+      if (!api.cache[cache_key]) {
+        return api.get(resource, id, action, function(error, result) {
+          if (error) {
+            return respondWith404(request, response);
+          }
+          result = handleResult(request, response, result);
+          api.cache[cache_key] = new Buffer(JSON.stringify(result));
+          return response.sendJson(200, result);
+        });
+      } else {
+        response.sendHeaders({
+          'Content-Type': 'application/json'
+        });
+        return response.end(api.cache[cache_key]);
+      }
     }
   };
 };

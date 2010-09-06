@@ -8,22 +8,22 @@ utils = require './utils'
 module.exports = ->
   (request, response, next, path) ->
     [resource, id, action] = path.split '/'
-    cache_key = utils.makeCacheKey resource, id, action
-    if not api.cache[cache_key]
-      if resource is 'song' and action is 'download'
-        api.get 'song', id, null, (error, song) ->
-          return respondWith404 request, response if error or not song.id
-          sendFile request, response, song.get 'path'
-      else
+    if resource is 'song' and action is 'download'
+      api.get 'song', id, null, (error, song) ->
+        return respondWith404 request, response if error or not song.id
+        sendFile request, response, song.get 'path'
+    else
+      cache_key = utils.makeCacheKey resource, id, action
+      if not api.cache[cache_key]
         api.get resource, id, action, (error, result) ->
           return respondWith404 request, response if error
           result = handleResult request, response, result
           api.cache[cache_key] = new Buffer JSON.stringify result
           response.sendJson 200, result
-    else
-      response.sendHeaders
-        'Content-Type': 'application/json'
-      response.end api.cache[cache_key]
+      else
+        response.sendHeaders
+          'Content-Type': 'application/json'
+        response.end api.cache[cache_key]
 
 handleResult = (request, response, result) ->
   if Buffer.isBuffer result
