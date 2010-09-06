@@ -1,3 +1,4 @@
+sys   = request 'sys'
 redis = require './redis'
 api   = require './api'
 fs    = require 'fs'

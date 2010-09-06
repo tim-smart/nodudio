@@ -1,4 +1,5 @@
-var api, cacheKey, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders, utils;
+var api, cacheKey, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders, sys, utils;
+sys = request('sys');
 redis = require('./redis');
 api = require('./api');
 fs = require('fs');
