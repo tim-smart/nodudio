@@ -1,28 +1,26 @@
-emitter = nodudio.socket = createWebSocket()
+emitter = nodudio.socket = new nodudio.EventEmitter
 
-createWebSocket = ->
-  ws = new WebSocket location.host
-  ws.onclose = ->
-    nodudio.socket = createWebSocket()
-  ws.onmessage = (event) ->
-    emitter.emit 'message', event.data
-
-socket = new io.Socket location.hostname,
-  transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling', 'jsonp-polling']
-
-socket.connect()
 counter   = 0
 callbacks = {}
+
+createWebsocket = ->
+  emitter._ws = new WebSocket "ws://#{location.host}"
+  emitter._ws.onmessage = (event) ->
+    emitter.emit 'message', event.data
+  emitter._ws.onclose = ->
+    createWebsocket()
+
+createWebsocket()
 
 emitter.request = (args...) ->
   if typeof args[args.length - 1] is 'function'
     id            = counter++
     callbacks[id] = args.pop()
     args.unshift(id)
-  socket.send(args.join(':'))
+  @_ws.send(args.join(':'))
 
 emitter.write = (msg) ->
-  socket.send(msg)
+  @_ws.send(msg)
 
 emitter.on 'message', (message) ->
   try

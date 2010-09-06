@@ -33,25 +33,21 @@ nodudio.EventEmitter = EventEmitter;
 
 })();
 (function() {
-  var callbacks, counter, createWebSocket, emitter, socket;
+  var callbacks, counter, createWebsocket, emitter;
   var __slice = Array.prototype.slice;
-  emitter = (nodudio.socket = createWebSocket());
-  createWebSocket = function() {
-    var ws;
-    ws = new WebSocket(location.host);
-    ws.onclose = function() {
-      return (nodudio.socket = createWebSocket());
-    };
-    return (ws.onmessage = function(event) {
-      return emitter.emit('message', event.data);
-    });
-  };
-  socket = new io.Socket(location.hostname, {
-    transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling', 'jsonp-polling']
-  });
-  socket.connect();
+  emitter = (nodudio.socket = new nodudio.EventEmitter());
   counter = 0;
   callbacks = {};
+  createWebsocket = function() {
+    emitter._ws = new WebSocket("ws://" + (location.host));
+    emitter._ws.onmessage = function(event) {
+      return emitter.emit('message', event.data);
+    };
+    return (emitter._ws.onclose = function() {
+      return createWebsocket();
+    });
+  };
+  createWebsocket();
   emitter.request = function() {
     var args, id;
     args = __slice.call(arguments, 0);
@@ -60,10 +56,10 @@ nodudio.EventEmitter = EventEmitter;
       callbacks[id] = args.pop();
       args.unshift(id);
     }
-    return socket.send(args.join(':'));
+    return this._ws.send(args.join(':'));
   };
   emitter.write = function(msg) {
-    return socket.send(msg);
+    return this._ws.send(msg);
   };
   emitter.on('message', function(message) {
     var _a, callback, data, index;
