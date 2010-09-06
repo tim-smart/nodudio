@@ -59,7 +59,8 @@ Base.prototype.stringId = function() {
   return ids.join(':');
 };
 Base.prototype.remove = function(cb) {
-  var _a, _b, _c, _d, _e, _f, error, task, type;
+  var _a, _b, _c, _d, _e, _f, error, model, task, type;
+  model = this;
   task = new Task({
     self: [redis.deleteModel, this.name, this.id],
     self2: [redis.deleteLink, this.name, this.stringId()]
@@ -79,48 +80,31 @@ Base.prototype.remove = function(cb) {
     if (err) {
       error = err;
     }
-    if (!(task)) {
+    if (!task) {
+      expireCaches(model);
       return cb(error);
     }
   });
 };
 Base.prototype.save = function(cb) {
   return redis.saveModel(this, function(error, model) {
-    var _a, _b, _c, _d, _e, _f, attr, private;
     if (error) {
       return cb(error);
     }
-    attr = {};
-    _b = model.private;
-    for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      private = _b[_a];
-      attr[private] = model.data[private];
-      model.data.path = undefined;
-    }
-    server.socket.broadcast("save:" + (model.name) + ":" + (model.id) + "|" + (JSON.stringify(model.data)));
-    _e = model.private;
-    for (_d = 0, _f = _e.length; _d < _f; _d++) {
-      private = _e[_d];
-      model.data[private] = attr[private];
-    }
-    return expireCaches(model, cb);
+    server.socket.broadcast("save:" + (model.name) + ":" + (model.id) + "|" + (JSON.stringify(model.toObject())));
+    expireCaches(model);
+    return cb();
   });
 };
-expireCaches = function(model, cb) {
-  var _a, _b, _c, task, type;
-  task = new Task({
-    type: [redis.expireCache, model.name, null, null],
-    self: [redis.expireCache, model.name, model.id, null]
-  });
-  _b = model.belongs_to;
-  for (_a = 0, _c = _b.length; _a < _c; _a++) {
-    type = _b[_a];
-    task.add(type, [redis.expireCache, type, model.get("" + (type) + "_id"), model.name]);
+expireCaches = function(model) {
+  var _a, _b, _c, _d, type;
+  api.cache[utils.makeCacheKey(model.name)] = null;
+  api.cache[utils.makeCacheKey(model.name, model.id)] = null;
+  _a = []; _c = model.belongs_to;
+  for (_b = 0, _d = _c.length; _b < _d; _b++) {
+    type = _c[_b];
+    _a.push(api.cache[utils.makeCacheKey(type, model.get("" + (type) + "_id"), model.name)] = null);
   }
-  return task.run(function(task) {
-    if (!(task)) {
-      return cb(null, model);
-    }
-  });
+  return _a;
 };
 module.exports = Base;

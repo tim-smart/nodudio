@@ -15,6 +15,12 @@ exports.base64Encode = (string) ->
 exports.base64Decode = (string) ->
   new Buffer(string, 'base64').toString('utf8')
 
+exports.makeCacheKey = (resource, id, action) ->
+  key = ['cache', resource]
+  key.push id     if id
+  key.push action if action
+  key.join ':'
+
 # Iterate over files
 class DirectoryWalker
   constructor: (dir) ->

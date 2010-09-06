@@ -1,4 +1,4 @@
-var Album, Artist, ID3, Indexer, Seq, Song, Task, cleanIndex, config, crypto, dirs, fs, idFromString, path_m, redis, serviceTask, utils, watchDirectory;
+var Album, Artist, Cleaner, ID3, Indexer, Seq, Song, Task, cleanIndex, config, crypto, dirs, fs, idFromString, path_m, redis, serviceTask, utils, watchDirectory;
 var __extends = function(child, parent) {
     var ctor = function(){};
     ctor.prototype = parent.prototype;
@@ -289,95 +289,129 @@ watchDirectory = function(dir) {
     return indexer.run();
   });
 };
-cleanIndex = (exports.cleanIndex = function(cb) {
-  var removeEmptyAlbums, removeEmptyArtists;
-  removeEmptyAlbums = function(error, albums) {
-    var _a, _b, _c, get_task, id, remove_task, task;
+Cleaner = function() {
+  this.queue = [];
+  this.working = false;
+  return this;
+};
+Cleaner.prototype.db = redis;
+Cleaner.prototype.run = function(cb) {
+  var $;
+  this.callback = cb;
+  $ = this;
+  return this.db.client.hkeys('link:path', function(error, data) {
+    var _a, _b, _c, path_e;
     if (error) {
-      return cb(error);
-    }
-    remove_task = new Task();
-    get_task = new Task();
-    task = new Task();
-    _b = albums;
-    for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      id = _b[_a];
-      id = id.toString();
-      task.add(id, [redis.sCard, ("link:album:" + (id) + ":song")]);
-    }
-    return task.run(function(id, error, songs) {
-      if (!id) {
-        return get_task.run(function(id, error, album) {
-          if (!id) {
-            return remove_task.run(function(task) {
-              if (!(task)) {
-                return redis.getCollection('artist', removeEmptyArtists);
-              }
-            });
-          } else if (album && album.id) {
-            return remove_task.add(id, [album.remove]);
-          }
-        });
-      } else if (songs && songs.length === 0) {
-        return get_task.add(id, [redis.getModel, new Album(), id]);
-      }
-    });
-  };
-  removeEmptyArtists = function(error, artists) {
-    var _a, _b, _c, get_task, id, remove_task, task;
-    if (error) {
-      return cb(error);
-    }
-    remove_task = new Task();
-    get_task = new Task();
-    task = new Task();
-    _b = artists;
-    for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      id = _b[_a];
-      id = id.toString();
-      task.add(id, [redis.sCard, ("link:artist:" + (id) + ":song")]);
-    }
-    return task.run(function(id, error, songs) {
-      if (!id) {
-        return get_task.run(function(id, error, artist) {
-          if (!id) {
-            return remove_task.run(function(task) {
-              if (!(id)) {
-                return cb();
-              }
-            });
-          } else if (artist && artist.id) {
-            return remove_task.add(id, [artist.remove]);
-          }
-        });
-      } else if (songs && songs.length === 0) {
-        return get_task.add(id, [redis.getModel, new Artist(), id]);
-      }
-    });
-  };
-  return redis.client.hgetall('link:path', function(error, data) {
-    var task;
-    if (error) {
-      return cb(error);
+      return $.callback(error);
     }
     if (!(data)) {
-      return cb();
+      return $.callback();
     }
-    task = new Seq();
-    Object.keys(data).forEach(function(path_e) {
-      var path;
-      path = decodeURI(path_e);
-      return task.add(function(next) {
-        return fs.stat(path, function(error, stat) {
-          return error ? redis.deletelink('path', path_e, function() {
-            return next();
-          }) : next();
-        });
+    _b = data;
+    for (_a = 0, _c = _b.length; _a < _c; _a++) {
+      path_e = _b[_a];
+      path_e = path_e.toString();
+      $.queue.push([decodeURI(path_e), path_e]);
+    }
+    return $.queueUpdate();
+  });
+};
+Cleaner.prototype.queueUpdate = function() {
+  var $, _a, path, path_e, working;
+  if (working) {
+    return null;
+  }
+  $ = this;
+  if (this.queue.length === 0) {
+    return this.db.getCollection('album', function(error, albums) {
+      if (error) {
+        return $.callback(error);
+      }
+      return $.removeEmptyAlbums(albums);
+    });
+  }
+  working = true;
+  _a = this.queue.pop();
+  path = _a[0];
+  path_e = _a[1];
+  return fs.stat(path, function(error, stat) {
+    return error ? $.db.deletelink('path', path_e, function() {
+      return $.queueNext();
+    }) : $.queueNext();
+  });
+};
+Cleaner.prototype.queueNext = function() {
+  this.working = false;
+  return this.queueUpdate();
+};
+Cleaner.prototype.removeEmptyAlbums = function(albums) {
+  var $, _a, _b, _c, get_task, id, remove_task, task;
+  $ = this;
+  remove_task = new Task();
+  get_task = new Task();
+  task = new Task();
+  _b = albums;
+  for (_a = 0, _c = _b.length; _a < _c; _a++) {
+    id = _b[_a];
+    id = id.toString();
+    task.add(id, [this.db.sCard, ("link:album:" + (id) + ":song")]);
+  }
+  return task.run(function(id, error, songs) {
+    if (!id) {
+      return get_task.run(function(id, error, album) {
+        if (!id) {
+          return remove_task.run(function(task) {
+            return !task ? $.db.getCollection('artist', function(error, artists) {
+              if (error) {
+                return $.callback(error);
+              }
+              return $.removeEmptyArtists(artists);
+            }) : null;
+          });
+        } else if (album && album.id) {
+          return remove_task.add(id, [album.remove]);
+        }
       });
-    });
-    return task.run(function() {
-      return redis.getCollection('album', removeEmptyAlbums);
-    });
+    } else if (songs && songs.length === 0) {
+      return get_task.add(id, [$.db.getModel, new Album(), id]);
+    }
+  });
+};
+Cleaner.prototype.removeEmptyArtists = function(artists) {
+  var $, _a, _b, _c, get_task, id, remove_task, task;
+  $ = this;
+  remove_task = new Task();
+  get_task = new Task();
+  task = new Task();
+  _b = artists;
+  for (_a = 0, _c = _b.length; _a < _c; _a++) {
+    id = _b[_a];
+    id = id.toString();
+    task.add(id, [this.db.sCard, ("link:artist:" + (id) + ":song")]);
+  }
+  return task.run(function(id, error, songs) {
+    if (!id) {
+      return get_task.run(function(id, error, artist) {
+        if (!id) {
+          return remove_task.run(function(task) {
+            if (!(id)) {
+              return $.callback();
+            }
+          });
+        } else if (artist && artist.id) {
+          return remove_task.add(id, [artist.remove]);
+        }
+      });
+    } else if (songs && songs.length === 0) {
+      return get_task.add(id, [$.db.getModel, new Artist(), id]);
+    }
+  });
+};
+cleanIndex = (exports.cleanIndex = function(cb) {
+  var cleaner;
+  cleaner = new Cleaner();
+  return cleaner.run(function() {
+    return cb();
   });
 });
 serviceTask = function() {

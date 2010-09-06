@@ -43,6 +43,7 @@ class Base
     ids.join(':')
 
   remove: (cb) ->
+    model = this
     task = new Task
       self:  [redis.deleteModel, @name, @id]
       self2: [redis.deleteLink, @name, @stringId()]
@@ -53,26 +54,21 @@ class Base
     error = null
     task.run (task, err) ->
       error = err if err
-      cb error unless task
+      if not task
+        expireCaches model
+        cb error
 
   save: (cb) ->
     redis.saveModel this, (error, model) ->
       return cb error if error
-      attr = {}
-      for private in model.private
-        attr[private] = model.data[private]
-        model.data.path = undefined
-      server.socket.broadcast "save:#{model.name}:#{model.id}|#{JSON.stringify(model.data)}"
-      for private in model.private
-        model.data[private] = attr[private]
-      expireCaches model, cb
+      server.socket.broadcast "save:#{model.name}:#{model.id}|#{JSON.stringify(model.toObject())}"
+      expireCaches model
+      cb()
 
-expireCaches = (model, cb) ->
-  task = new Task
-    type: [redis.expireCache, model.name, null, null]
-    self: [redis.expireCache, model.name, model.id, null]
+expireCaches = (model) ->
+  api.cache[utils.makeCacheKey model.name] = null
+  api.cache[utils.makeCacheKey model.name, model.id] = null
   for type in model.belongs_to
-    task.add type, [redis.expireCache, type, model.get("#{type}_id"), model.name]
-  task.run (task) -> cb null, model unless task
+    api.cache[utils.makeCacheKey type, model.get("#{type}_id"), model.name] = null
 
 module.exports = Base

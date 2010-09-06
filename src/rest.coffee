@@ -2,27 +2,27 @@ redis = require './redis'
 api   = require './api'
 fs    = require 'fs'
 pathm = require 'path'
+utils = require './utils'
 
 module.exports = ->
   (request, response, next, path) ->
     [resource, id, action] = path.split '/'
-    redis.getCache resource, id, action, (error, cache) ->
-      console.log !!cache
-      if error or not cache
-        if resource is 'song' and action is 'download'
-          api.get 'song', id, null, (error, song) ->
-            return respondWith404 request, response if error or not song.id
-            sendFile request, response, song.get 'path'
-        else
-          api.get resource, id, action, (error, result) ->
-            return respondWith404 request, response if error
-            result = handleResult request, response, result
-            redis.setCache resource, id, action, result, ->
-            response.sendJson 200, result
+    cache_key = utils.makeCacheKey resource, id, action
+    if not api.cache[cache_key]
+      if resource is 'song' and action is 'download'
+        api.get 'song', id, null, (error, song) ->
+          return respondWith404 request, response if error or not song.id
+          sendFile request, response, song.get 'path'
       else
-        response.sendHeaders
-          'Content-Type': 'application/json'
-        response.end cache
+        api.get resource, id, action, (error, result) ->
+          return respondWith404 request, response if error
+          result = handleResult request, response, result
+          api.cache[cache_key] = new Buffer JSON.stringify result
+          response.sendJson 200, result
+    else
+      response.sendHeaders
+        'Content-Type': 'application/json'
+      response.end api.cache[cache_key]
 
 handleResult = (request, response, result) ->
   if Buffer.isBuffer result
@@ -69,3 +69,9 @@ setRangeHeaders = (request, stat, headers, read_opts) ->
 respondWith404 = (request, response) ->
   response.sendJson 404,
     error: "Resource not found"
+
+cacheKey = exports.makeCacheKey = (resource, id, action) ->
+  key = ['cache', resource]
+  key.push id     if id
+  key.push action if action
+  key.join ':'

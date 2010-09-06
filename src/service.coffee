@@ -196,59 +196,84 @@ watchDirectory = (dir) ->
     indexer.run()
 
 # Clean up, cleanup, everybody everywhere
-cleanIndex = exports.cleanIndex = (cb) ->
-  removeEmptyAlbums = (error, albums) ->
-    return cb error if error
+class Cleaner
+  constructor: ->
+    @queue   = []
+    @working = no
+
+  db: redis
+
+  run: (cb) ->
+    @callback = cb
+    $ = this
+    @db.client.hkeys 'link:path', (error, data) ->
+      return $.callback error if error
+      return $.callback()     unless data
+      for path_e in data
+        path_e = path_e.toString()
+        $.queue.push [decodeURI(path_e), path_e]
+      $.queueUpdate()
+
+  queueUpdate: ->
+    return if working
+    $ = this
+    if @queue.length is 0
+      return @db.getCollection 'album', (error, albums) ->
+        return $.callback error if error
+        $.removeEmptyAlbums albums
+    working = yes
+    [path, path_e] = @queue.pop()
+    fs.stat path, (error, stat) ->
+      if error then $.db.deletelink 'path', path_e, -> $.queueNext()
+      else $.queueNext()
+
+  queueNext: ->
+    @working = no
+    @queueUpdate()
+
+  removeEmptyAlbums: (albums) ->
+    $           = this
     remove_task = new Task
     get_task    = new Task
     task        = new Task
     for id in albums
       id = id.toString()
-      task.add id, [redis.sCard, "link:album:#{id}:song"]
+      task.add id, [@db.sCard, "link:album:#{id}:song"]
     task.run (id, error, songs) ->
       if not id
         get_task.run (id, error, album) ->
           if not id 
             remove_task.run (task) ->
-              redis.getCollection 'artist', removeEmptyArtists unless task
+              if not task then $.db.getCollection 'artist', (error, artists) ->
+                return $.callback error if error
+                $.removeEmptyArtists artists
           else if album and album.id
             remove_task.add id, [album.remove]
       else if songs and songs.length is 0
-        get_task.add id, [redis.getModel, new Album, id]
+        get_task.add id, [$.db.getModel, new Album, id]
 
-  removeEmptyArtists = (error, artists) ->
-    return cb error if error
+  removeEmptyArtists: (artists) ->
+    $           = this
     remove_task = new Task
     get_task    = new Task
     task        = new Task
     for id in artists
       id = id.toString()
-      task.add id, [redis.sCard, "link:artist:#{id}:song"]
+      task.add id, [@db.sCard, "link:artist:#{id}:song"]
     task.run (id, error, songs) ->
       if not id
         get_task.run (id, error, artist) ->
           if not id 
-            remove_task.run (task) -> cb() unless id
+            remove_task.run (task) -> $.callback() unless id
           else if artist and artist.id
             remove_task.add id, [artist.remove]
       else if songs and songs.length is 0
-        get_task.add id, [redis.getModel, new Artist, id]
+        get_task.add id, [$.db.getModel, new Artist, id]
 
-  # Remove bad paths
-  redis.client.hgetall 'link:path', (error, data) ->
-    return cb error if error
-    return cb()     unless data
-    task = new Seq
-    Object.keys(data).forEach (path_e) ->
-      path = decodeURI path_e
-      task.add (next) ->
-        fs.stat path, (error, stat) ->
-          if error
-            redis.deletelink 'path', path_e, ->
-              next()
-          else next()
-    task.run ->
-      redis.getCollection 'album', removeEmptyAlbums
+cleanIndex = exports.cleanIndex = (cb) ->
+  cleaner = new Cleaner
+  cleaner.run ->
+    cb()
 
 # Do a full scan every 20 minutes and on startup
 serviceTask = ->

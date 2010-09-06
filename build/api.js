@@ -83,6 +83,7 @@ module.exports = {
         });
       }) : cb(null, result);
     });
-  }
+  },
+  cache: {}
 };
 not_found = new Error('Not Found');

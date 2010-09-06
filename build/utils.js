@@ -15,6 +15,17 @@ exports.base64Encode = function(string) {
 exports.base64Decode = function(string) {
   return new Buffer(string, 'base64').toString('utf8');
 };
+exports.makeCacheKey = function(resource, id, action) {
+  var key;
+  key = ['cache', resource];
+  if (id) {
+    key.push(id);
+  }
+  if (action) {
+    key.push(action);
+  }
+  return key.join(':');
+};
 DirectoryWalker = function(dir) {
   this.dir = dir;
   return this;

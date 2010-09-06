@@ -56,4 +56,6 @@ module.exports =
                 ret.push instance
         else cb null, result
 
+  cache: {}
+
 not_found = new Error 'Not Found'

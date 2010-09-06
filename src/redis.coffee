@@ -150,21 +150,3 @@ exports.getCollection = (type, cb) ->
 
 exports.addCollection = (type, id, cb) ->
   client.sadd "collection:#{type}", id, cb
-
-exports.getCache = (resource, id, action, cb) ->
-  key = cacheKey resource, id, action
-  client.get key, cb
-
-exports.setCache = (resource, id, action, result, cb) ->
-  key = cacheKey resource, id, action
-  client.set key, new Buffer(JSON.stringify(result)), cb
-
-exports.expireCache = (resource, id, action, cb) ->
-  key = cacheKey resource, id, action
-  client.del key, cb
-
-cacheKey = (resource, id, action) ->
-  key = ['cache', resource]
-  key.push id     if id
-  key.push action if action
-  key.join ':'

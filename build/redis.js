@@ -1,4 +1,4 @@
-var Task, cacheKey, callbacks, client, config, redis, server, spawn;
+var Task, callbacks, client, config, redis, server, spawn;
 redis = require('../deps/redis-client');
 config = require('./config');
 spawn = require('child_process').spawn;
@@ -210,30 +210,4 @@ exports.getCollection = function(type, cb) {
 };
 exports.addCollection = function(type, id, cb) {
   return client.sadd("collection:" + (type), id, cb);
-};
-exports.getCache = function(resource, id, action, cb) {
-  var key;
-  key = cacheKey(resource, id, action);
-  return client.get(key, cb);
-};
-exports.setCache = function(resource, id, action, result, cb) {
-  var key;
-  key = cacheKey(resource, id, action);
-  return client.set(key, new Buffer(JSON.stringify(result)), cb);
-};
-exports.expireCache = function(resource, id, action, cb) {
-  var key;
-  key = cacheKey(resource, id, action);
-  return client.del(key, cb);
-};
-cacheKey = function(resource, id, action) {
-  var key;
-  key = ['cache', resource];
-  if (id) {
-    key.push(id);
-  }
-  if (action) {
-    key.push(action);
-  }
-  return key.join(':');
 };

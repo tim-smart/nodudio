@@ -1,38 +1,37 @@
-var api, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders;
+var api, cacheKey, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders, utils;
 redis = require('./redis');
 api = require('./api');
 fs = require('fs');
 pathm = require('path');
+utils = require('./utils');
 module.exports = function() {
   return function(request, response, next, path) {
-    var _a, action, id, resource;
+    var _a, action, cache_key, id, resource;
     _a = path.split('/');
     resource = _a[0];
     id = _a[1];
     action = _a[2];
-    return redis.getCache(resource, id, action, function(error, cache) {
-      console.log(!!cache);
-      if (error || !cache) {
-        return resource === 'song' && action === 'download' ? api.get('song', id, null, function(error, song) {
-          if (error || !song.id) {
-            return respondWith404(request, response);
-          }
-          return sendFile(request, response, song.get('path'));
-        }) : api.get(resource, id, action, function(error, result) {
-          if (error) {
-            return respondWith404(request, response);
-          }
-          result = handleResult(request, response, result);
-          redis.setCache(resource, id, action, result, function() {});
-          return response.sendJson(200, result);
-        });
-      } else {
-        response.sendHeaders({
-          'Content-Type': 'application/json'
-        });
-        return response.end(cache);
-      }
-    });
+    cache_key = utils.makeCacheKey(resource, id, action);
+    if (!api.cache[cache_key]) {
+      return resource === 'song' && action === 'download' ? api.get('song', id, null, function(error, song) {
+        if (error || !song.id) {
+          return respondWith404(request, response);
+        }
+        return sendFile(request, response, song.get('path'));
+      }) : api.get(resource, id, action, function(error, result) {
+        if (error) {
+          return respondWith404(request, response);
+        }
+        result = handleResult(request, response, result);
+        api.cache[cache_key] = new Buffer(JSON.stringify(result));
+        return response.sendJson(200, result);
+      });
+    } else {
+      response.sendHeaders({
+        'Content-Type': 'application/json'
+      });
+      return response.end(api.cache[cache_key]);
+    }
   };
 };
 handleResult = function(request, response, result) {
@@ -108,3 +107,14 @@ respondWith404 = function(request, response) {
     error: "Resource not found"
   });
 };
+cacheKey = (exports.makeCacheKey = function(resource, id, action) {
+  var key;
+  key = ['cache', resource];
+  if (id) {
+    key.push(id);
+  }
+  if (action) {
+    key.push(action);
+  }
+  return key.join(':');
+});
