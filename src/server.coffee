@@ -3,6 +3,7 @@ ws      = require 'websocket-server'
 config  = require './config'
 redis   = require './redis'
 api     = require './api'
+utils   = require './utils'
 Package = require('node-asset').Package
 require './service'
 
@@ -39,10 +40,15 @@ socket.on 'connection', (client) ->
 
     switch message[0]
       when 'get'
-        api.get message[1], message[2], message[3], (error, result) ->
-          return client.send("#{id}:error|#{error.toString()}") if error
-          result = handleResult(result)
-          client.send("#{id}|#{JSON.stringify(result)}")
+        cache_key = utils.makeCacheKey message[1], message[2], message[3]
+        if not api.cache[cache_key]
+          api.get message[1], message[2], message[3], (error, result) ->
+            return client.send("#{id}:error|#{error.toString()}") if error
+            result = handleResult(result)
+            result = JSON.stringify result
+            client.send("#{id}|#{result}")
+            api.cache[cache_key] = new Buffer result
+        else client.send("#{id}|#{api.cache[cache_key].toString()}")
 
 handleResult = (result) ->
   if Buffer.isBuffer result
