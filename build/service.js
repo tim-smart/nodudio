@@ -347,6 +347,14 @@ Cleaner.prototype.queueNext = function() {
 Cleaner.prototype.removeEmptyAlbums = function(albums) {
   var $, _a, _b, _c, get_task, id, remove_task, task;
   $ = this;
+  if (!albums) {
+    return this.db.getCollection('artist', function(error, artists) {
+      if (error) {
+        return $.callback(error);
+      }
+      return $.removeEmptyArtists(artists);
+    });
+  }
   remove_task = new Task();
   get_task = new Task();
   task = new Task();
@@ -379,6 +387,9 @@ Cleaner.prototype.removeEmptyAlbums = function(albums) {
 };
 Cleaner.prototype.removeEmptyArtists = function(artists) {
   var $, _a, _b, _c, get_task, id, remove_task, task;
+  if (!artists) {
+    return this.callback();
+  }
   $ = this;
   remove_task = new Task();
   get_task = new Task();

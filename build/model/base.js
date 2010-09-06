@@ -1,9 +1,10 @@
-var Base, Task, expireCaches, idFromString, redis, server, utils;
+var Base, Task, api, expireCaches, idFromString, redis, server, utils;
 var __hasProp = Object.prototype.hasOwnProperty;
 redis = require('../redis');
 server = require('../server');
 Task = require('parallel').Task;
 utils = require('../utils');
+api = require('../api');
 idFromString = utils.idFromString;
 Base = function(data) {
   var _a;
@@ -97,7 +98,7 @@ Base.prototype.save = function(cb) {
     }
     server.socket.broadcast("save:" + (model.name) + ":" + (model.id) + "|" + (JSON.stringify(model.toObject())));
     expireCaches(model);
-    return cb();
+    return cb(null, model);
   });
 };
 expireCaches = function(model) {

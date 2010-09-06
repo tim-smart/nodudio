@@ -232,7 +232,11 @@ class Cleaner
     @queueUpdate()
 
   removeEmptyAlbums: (albums) ->
-    $           = this
+    $ = this
+    if not albums
+      return @db.getCollection 'artist', (error, artists) ->
+        return $.callback error if error
+        $.removeEmptyArtists artists
     remove_task = new Task
     get_task    = new Task
     task        = new Task
@@ -253,6 +257,8 @@ class Cleaner
         get_task.add id, [$.db.getModel, new Album, id]
 
   removeEmptyArtists: (artists) ->
+    if not artists
+      return @callback()
     $           = this
     remove_task = new Task
     get_task    = new Task

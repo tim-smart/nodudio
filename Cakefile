@@ -60,7 +60,6 @@ task 'build:client', 'Build client coffee', ->
   scripts = new Package 'public/js/all.js', [
     'assets/coffee/nodudio.coffee'
     'assets/js/events.js'
-    'assets/js/socket.io.js'
     'assets/coffee/socket.coffee'
   ], {
     type:     'coffee'

@@ -1,6 +1,6 @@
-var Package, api, config, handleResult, io, redis, router, socket;
+var Package, api, config, handleResult, redis, router, socket, ws;
 router = new (require('biggie-router'))();
-io = require('socket.io');
+ws = require('websocket-server');
 config = require('./config');
 redis = require('./redis');
 api = require('./api');
@@ -21,9 +21,9 @@ router.module('static', __dirname + '/../public').bind(function(request, respons
   return response.sendBody(404, 'Asset not found: ' + request.url);
 });
 router.listen(config.http_port);
-socket = (exports.socket = io.listen(router));
-process.setgid(1000);
-process.setuid(1000);
+socket = (exports.socket = ws.createServer({
+  server: router
+}));
 socket.on('connection', function(client) {
   return client.on('message', function(message) {
     var _a, data, id, index;
@@ -33,7 +33,7 @@ socket.on('connection', function(client) {
     } else {
       message = message.split(':');
     }
-    console.log("[Socket] " + (message.join(':')));
+    console.log("[WebSocket] " + (message.join(':')));
     id = message.shift();
     if ((_a = message[0]) === 'get') {
       return api.get(message[1], message[2], message[3], function(error, result) {

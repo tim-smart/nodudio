@@ -1,4 +1,11 @@
-emitter = nodudio.socket = new nodudio.EventEmitter
+emitter = nodudio.socket = createWebSocket()
+
+createWebSocket = ->
+  ws = new WebSocket location.host
+  ws.onclose = ->
+    nodudio.socket = createWebSocket()
+  ws.onmessage = (event) ->
+    emitter.emit 'message', event.data
 
 socket = new io.Socket location.hostname,
   transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling', 'jsonp-polling']
@@ -17,7 +24,7 @@ emitter.request = (args...) ->
 emitter.write = (msg) ->
   socket.send(msg)
 
-socket.on 'message', (message) ->
+emitter.on 'message', (message) ->
   try
     if index = message.indexOf('|')
       data    = message.slice(index + 1)

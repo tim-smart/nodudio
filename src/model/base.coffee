@@ -2,6 +2,7 @@ redis  = require '../redis'
 server = require '../server'
 Task   = require('parallel').Task
 utils  = require '../utils'
+api    = require '../api'
 
 idFromString = utils.idFromString
 
@@ -63,7 +64,7 @@ class Base
       return cb error if error
       server.socket.broadcast "save:#{model.name}:#{model.id}|#{JSON.stringify(model.toObject())}"
       expireCaches model
-      cb()
+      cb null, model
 
 expireCaches = (model) ->
   api.cache[utils.makeCacheKey model.name] = null

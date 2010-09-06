@@ -1,5 +1,5 @@
 router  = new (require 'biggie-router')
-io      = require 'socket.io'
+ws      = require 'websocket-server'
 config  = require './config'
 redis   = require './redis'
 api     = require './api'
@@ -25,10 +25,8 @@ router.module('static', __dirname + '/../public').bind (request, response) ->
 
 router.listen(config.http_port)
 
-socket = exports.socket = io.listen(router)
-
-process.setgid(1000)
-process.setuid(1000)
+socket = exports.socket = ws.createServer
+  server: router
 
 socket.on 'connection', (client) ->
   client.on 'message', (message) ->
@@ -36,7 +34,7 @@ socket.on 'connection', (client) ->
       data    = message.slice(index + 1)
       message = message.slice(0, index).split(':')
     else message = message.split(':')
-    console.log "[Socket] #{message.join ':'}"
+    console.log "[WebSocket] #{message.join ':'}"
     id = message.shift()
 
     switch message[0]
