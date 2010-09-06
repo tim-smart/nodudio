@@ -1,5 +1,5 @@
 var api, cacheKey, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders, sys, utils;
-sys = request('sys');
+sys = require('sys');
 redis = require('./redis');
 api = require('./api');
 fs = require('fs');
@@ -12,6 +12,7 @@ module.exports = function() {
     resource = _a[0];
     id = _a[1];
     action = _a[2];
+    console.log(resource, id, action);
     if (resource === 'song' && action === 'download') {
       return api.get('song', id, null, function(error, song) {
         if (error || !song.id) {

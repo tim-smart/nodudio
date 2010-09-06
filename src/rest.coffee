@@ -1,4 +1,4 @@
-sys   = request 'sys'
+sys   = require 'sys'
 redis = require './redis'
 api   = require './api'
 fs    = require 'fs'
@@ -8,6 +8,7 @@ utils = require './utils'
 module.exports = ->
   (request, response, next, path) ->
     [resource, id, action] = path.split '/'
+    console.log resource, id, action
     if resource is 'song' and action is 'download'
       api.get 'song', id, null, (error, song) ->
         return respondWith404 request, response if error or not song.id
