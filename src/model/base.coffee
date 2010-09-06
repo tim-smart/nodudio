@@ -28,9 +28,9 @@ class Base
   toObject: (private) ->
     if private then @data
     else
-      data = @data
-      for attr in @private
-        data[attr] = undefined
+      data = {}
+      for attr of @data when not ~@private.indexOf attr
+        data[attr] = @data[attr]
       data
 
   linkTo: (model, cb) =>

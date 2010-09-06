@@ -1,4 +1,5 @@
 var Base, Task, expireCaches, idFromString, redis, server, utils;
+var __hasProp = Object.prototype.hasOwnProperty;
 redis = require('../redis');
 server = require('../server');
 Task = require('parallel').Task;
@@ -27,15 +28,18 @@ Base.prototype.set = function(name, value) {
   return this;
 };
 Base.prototype.toObject = function(private) {
-  var _a, _b, _c, attr, data;
+  var _a, _b, attr, data;
   if (private) {
     return this.data;
   } else {
-    data = this.data;
-    _b = this.private;
-    for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      attr = _b[_a];
-      data[attr] = undefined;
+    data = {};
+    _b = this.data;
+    for (attr in _b) {
+      if (!__hasProp.call(_b, attr)) continue;
+      _a = _b[attr];
+      if (!~this.private.indexOf(attr)) {
+        data[attr] = this.data[attr];
+      }
     }
     return data;
   }
