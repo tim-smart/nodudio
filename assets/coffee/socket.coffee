@@ -33,5 +33,6 @@ socket.on 'message', (message) ->
   catch error
     console.log(error) if console and console.log
 
+# TODO: Remove debug statement
 emitter.on 'save', (model, id, data) ->
   console.log(model, id, data)

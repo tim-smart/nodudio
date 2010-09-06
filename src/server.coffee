@@ -32,11 +32,11 @@ process.setuid(1000)
 
 socket.on 'connection', (client) ->
   client.on 'message', (message) ->
-    if index = message.indexOf('|')
+    if ~(index = message.indexOf('|'))
       data    = message.slice(index + 1)
       message = message.slice(0, index).split(':')
     else message = message.split(':')
-
+    console.log "[Socket] #{message.join ':'}"
     id = message.shift()
 
     switch message[0]
@@ -55,6 +55,5 @@ handleResult = (result) ->
       model.data
     result
   else if result.data
-    model.data.path = undefined
-    result.data
+    result.toObject()
   else result

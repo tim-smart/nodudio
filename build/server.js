@@ -27,12 +27,13 @@ process.setuid(1000);
 socket.on('connection', function(client) {
   return client.on('message', function(message) {
     var _a, data, id, index;
-    if (index = message.indexOf('|')) {
+    if (~(index = message.indexOf('|'))) {
       data = message.slice(index + 1);
       message = message.slice(0, index).split(':');
     } else {
       message = message.split(':');
     }
+    console.log("[Socket] " + (message.join(':')));
     id = message.shift();
     if ((_a = message[0]) === 'get') {
       return api.get(message[1], message[2], message[3], function(error, result) {
@@ -63,8 +64,7 @@ handleResult = function(result) {
     })();
     return result;
   } else if (result.data) {
-    model.data.path = undefined;
-    return result.data;
+    return result.toObject();
   } else {
     return result;
   }
