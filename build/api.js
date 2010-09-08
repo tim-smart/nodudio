@@ -1,6 +1,7 @@
-var Task, not_found, redis;
+var Task, not_found, redis, utils;
 redis = require('./redis');
 Task = require('parallel').Task;
+utils = require('./utils');
 module.exports = {
   get: function(resource, id, action, cb) {
     var model;
@@ -84,6 +85,47 @@ module.exports = {
       }) : cb(null, result);
     });
   },
-  cache: {}
+  cache: {},
+  cache_callbacks: {},
+  getCache: function(resource, id, action, cb) {
+    var cache, cache_callbacks, cache_key, result;
+    cache = this.cache;
+    cache_key = utils.makeCacheKey(resource, id, action);
+    result = this.cache[cache_key];
+    if (result) {
+      return cb(null, result);
+    } else if (result === false) {
+      return this.cache_callbacks[cache_key].push(cb);
+    } else {
+      this.cache[cache_key] = false;
+      this.cache_callbacks[cache_key] = [cb];
+      cache_callbacks = this.cache_callbacks;
+      return this.get(resource, id, action, function(error, result) {
+        var _a, _b, _c, _d, _e, _f, _g, callback, model;
+        if (error) {
+          return cb(error);
+        }
+        result = (function() {
+          if (Array.isArray(result)) {
+            _a = []; _c = result;
+            for (_b = 0, _d = _c.length; _b < _d; _b++) {
+              model = _c[_b];
+              _a.push(model.toObject());
+            }
+            return _a;
+          } else {
+            return result.toObject();
+          }
+        })();
+        cache[cache_key] = new Buffer(JSON.stringify(result));
+        _f = cache_callbacks[cache_key];
+        for (_e = 0, _g = _f.length; _e < _g; _e++) {
+          callback = _f[_e];
+          callback(null, cache[cache_key]);
+        }
+        return (cache_callbacks[cache_key] = undefined);
+      });
+    }
+  }
 };
 not_found = new Error('Not Found');

@@ -13,24 +13,9 @@ module.exports = ->
         return respondWith404 request, response if error or not song.id
         sendFile request, response, song.get 'path'
     else
-      cache_key = utils.makeCacheKey resource, id, action
-      if not api.cache[cache_key]
-        api.get resource, id, action, (error, result) ->
-          return respondWith404 request, response if error
-          result = handleResult request, response, result
-          result = new Buffer JSON.stringify result
-          api.cache[cache_key] = result
-          response.sendJson 200, api.cache[cache_key]
-      else response.sendJson 200, api.cache[cache_key]
-
-handleResult = (request, response, result) ->
-  if Buffer.isBuffer result
-    result.toString()
-  else if Array.isArray result
-    result      = model.toObject() for model in result
-    result.path = undefined
-    result
-  else if result.toObject then result.toObject()
+      api.getCache resource, id, action, (error, buffer) ->
+        return respondWith404 request, response if error
+        response.sendJson 200, buffer
 
 sendFile = (request, response, path) ->
   fs.stat path, (error, stat) ->

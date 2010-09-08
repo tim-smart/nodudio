@@ -7,6 +7,7 @@ api = require('./api');
 utils = require('./utils');
 Package = require('node-asset').Package;
 require('./service');
+Buffer.poolSize = 1024 * 1024 * 1;
 router.addModule('nodudio', __dirname + '/rest');
 router.bind(function(request, response, next) {
   console.log("[HTTP] " + request.method + " " + request.url);
@@ -17,8 +18,7 @@ router.get('/').bind(function(request, response, next) {
   request.url = '/index.html';
   return next();
 });
-router.get(/^\/.*\.(js|css|html).*$/).module('gzip');
-router.module('static', __dirname + '/../public').bind(function(request, response) {
+router.module('sendfile', __dirname + '/../public').bind(function(request, response) {
   return response.sendBody(404, 'Asset not found: ' + request.url);
 });
 router.listen(config.http_port);

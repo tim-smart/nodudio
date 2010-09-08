@@ -1,5 +1,6 @@
 redis = require './redis'
 Task  = require('parallel').Task
+utils = require './utils'
 
 module.exports =
   get: (resource, id, action, cb) ->
@@ -57,5 +58,27 @@ module.exports =
         else cb null, result
 
   cache: {}
+
+  cache_callbacks: {}
+
+  getCache: (resource, id, action, cb) ->
+    cache     = @cache
+    cache_key = utils.makeCacheKey resource, id, action
+    result    = @cache[cache_key]
+    if result then return cb null, result
+    else if result is false
+      @cache_callbacks[cache_key].push cb
+    else
+      @cache[cache_key]           = false
+      @cache_callbacks[cache_key] = [cb]
+      cache_callbacks = @cache_callbacks
+      @get resource, id, action, (error, result) ->
+        return cb error if error
+        result = if Array.isArray result
+          model.toObject() for model in result
+        else result.toObject()
+        cache[cache_key] = new Buffer JSON.stringify result
+        callback null, cache[cache_key] for callback in cache_callbacks[cache_key]
+        cache_callbacks[cache_key] = undefined
 
 not_found = new Error 'Not Found'

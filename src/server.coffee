@@ -7,6 +7,8 @@ utils   = require './utils'
 Package = require('node-asset').Package
 require './service'
 
+Buffer.poolSize = 1024 * 1024 * 1
+
 router.addModule 'nodudio', __dirname + '/rest'
 
 router.bind (request, response, next) ->
@@ -19,9 +21,10 @@ router.get('/').bind (request, response, next) ->
   request.url = '/index.html'
   next()
 
-router.get(/^\/.*\.(js|css|html).*$/).module('gzip')
+#router.get(/^\/.*\.(js|css|html).*$/).module('gzip').
+       #module('static', __dirname + '/../public')
 
-router.module('static', __dirname + '/../public').bind (request, response) ->
+router.module('sendfile', __dirname + '/../public').bind (request, response) ->
   response.sendBody(404, 'Asset not found: ' + request.url)
 
 router.listen(config.http_port)

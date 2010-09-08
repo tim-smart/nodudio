@@ -1,4 +1,4 @@
-var api, cacheKey, fs, handleResult, pathm, redis, respondWith404, sendFile, setRangeHeaders, sys, utils;
+var api, cacheKey, fs, pathm, redis, respondWith404, sendFile, setRangeHeaders, sys, utils;
 sys = require('sys');
 redis = require('./redis');
 api = require('./api');
@@ -7,50 +7,23 @@ pathm = require('path');
 utils = require('./utils');
 module.exports = function() {
   return function(request, response, next, path) {
-    var _a, action, cache_key, id, resource;
+    var _a, action, id, resource;
     _a = path.split('/');
     resource = _a[0];
     id = _a[1];
     action = _a[2];
-    if (resource === 'song' && action === 'download') {
-      return api.get('song', id, null, function(error, song) {
-        if (error || !song.id) {
-          return respondWith404(request, response);
-        }
-        return sendFile(request, response, song.get('path'));
-      });
-    } else {
-      cache_key = utils.makeCacheKey(resource, id, action);
-      return !api.cache[cache_key] ? api.get(resource, id, action, function(error, result) {
-        if (error) {
-          return respondWith404(request, response);
-        }
-        result = handleResult(request, response, result);
-        result = new Buffer(JSON.stringify(result));
-        api.cache[cache_key] = result;
-        return response.sendJson(200, api.cache[cache_key]);
-      }) : response.sendJson(200, api.cache[cache_key]);
-    }
-  };
-};
-handleResult = function(request, response, result) {
-  var _a, _b, _c, _d, model;
-  if (Buffer.isBuffer(result)) {
-    return result.toString();
-  } else if (Array.isArray(result)) {
-    result = (function() {
-      _a = []; _c = result;
-      for (_b = 0, _d = _c.length; _b < _d; _b++) {
-        model = _c[_b];
-        _a.push(model.toObject());
+    return resource === 'song' && action === 'download' ? api.get('song', id, null, function(error, song) {
+      if (error || !song.id) {
+        return respondWith404(request, response);
       }
-      return _a;
-    })();
-    result.path = undefined;
-    return result;
-  } else if (result.toObject) {
-    return result.toObject();
-  }
+      return sendFile(request, response, song.get('path'));
+    }) : api.getCache(resource, id, action, function(error, buffer) {
+      if (error) {
+        return respondWith404(request, response);
+      }
+      return response.sendJson(200, buffer);
+    });
+  };
 };
 sendFile = function(request, response, path) {
   return fs.stat(path, function(error, stat) {
