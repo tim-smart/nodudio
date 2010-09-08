@@ -18,12 +18,10 @@ module.exports = ->
         api.get resource, id, action, (error, result) ->
           return respondWith404 request, response if error
           result = handleResult request, response, result
-          api.cache[cache_key] = new Buffer JSON.stringify result
-          response.sendJson 200, result
-      else
-        response.sendHeaders
-          'Content-Type': 'application/json'
-        response.end api.cache[cache_key]
+          result = new Buffer JSON.stringify result
+          api.cache[cache_key] = result
+          response.sendJson 200, api.cache[cache_key]
+      else response.sendJson 200, api.cache[cache_key]
 
 handleResult = (request, response, result) ->
   if Buffer.isBuffer result

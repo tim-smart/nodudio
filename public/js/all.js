@@ -89,3 +89,7 @@ nodudio.EventEmitter = EventEmitter;
   });
 })();
 
+(function() {
+
+})();
+

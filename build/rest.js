@@ -21,21 +21,15 @@ module.exports = function() {
       });
     } else {
       cache_key = utils.makeCacheKey(resource, id, action);
-      if (!api.cache[cache_key]) {
-        return api.get(resource, id, action, function(error, result) {
-          if (error) {
-            return respondWith404(request, response);
-          }
-          result = handleResult(request, response, result);
-          api.cache[cache_key] = new Buffer(JSON.stringify(result));
-          return response.sendJson(200, result);
-        });
-      } else {
-        response.sendHeaders({
-          'Content-Type': 'application/json'
-        });
-        return response.end(api.cache[cache_key]);
-      }
+      return !api.cache[cache_key] ? api.get(resource, id, action, function(error, result) {
+        if (error) {
+          return respondWith404(request, response);
+        }
+        result = handleResult(request, response, result);
+        result = new Buffer(JSON.stringify(result));
+        api.cache[cache_key] = result;
+        return response.sendJson(200, api.cache[cache_key]);
+      }) : response.sendJson(200, api.cache[cache_key]);
     }
   };
 };

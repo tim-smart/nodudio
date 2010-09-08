@@ -63,7 +63,7 @@ function debugFilter(buffer, len) {
     // Redis is binary-safe but assume for debug display that 
     // the encoding of textual data is UTF-8.
 
-    var filtered = buffer.utf8Slice(0, len || buffer.length);
+    var filtered = buffer.toString('utf8', 0, len || buffer.length);
 
     filtered = filtered.replace(/\r\n/g, '<CRLF>');
     filtered = filtered.replace(/\r/g, '<CR>');
@@ -165,7 +165,7 @@ ReplyParser.prototype.feed = function (inbound) {
                     // :42\r\n
                     //    ^
 
-                    var n = parseInt(this.valueBuffer.asciiSlice(0, this.valueBufferLen), 10);
+                    var n = parseInt(this.valueBuffer.toString('ascii', 0, this.valueBufferLen), 10);
                     maybeCallbackWithReply({ type:INTEGER, value:n });
                     break;
 
@@ -177,7 +177,7 @@ ReplyParser.prototype.feed = function (inbound) {
                         //   ^
 
                         var bulkLengthExpected = 
-                            parseInt(this.valueBuffer.asciiSlice(0, this.valueBufferLen), 10);
+                            parseInt(this.valueBuffer.toString('ascii', 0, this.valueBufferLen), 10);
 
                         if (bulkLengthExpected <= 0) {
                             maybeCallbackWithReply({ type:BULK, value:null });
@@ -213,7 +213,7 @@ ReplyParser.prototype.feed = function (inbound) {
                     //   ^
 
                     var multibulkRepliesExpected = 
-                        parseInt(this.valueBuffer.asciiSlice(0, this.valueBufferLen), 10);
+                        parseInt(this.valueBuffer.toString('ascii', 0, this.valueBufferLen), 10);
 
                     if (multibulkRepliesExpected <= 0) {
                         maybeCallbackWithReply({ type:MULTIBULK, value:null });
@@ -397,7 +397,7 @@ Client.prototype.onReply_ = function (reply) {
 
     if (typeof callback == "function") {
         if (reply.type == ERROR) {
-            callback(reply.value.utf8Slice(0, reply.value.length), null);
+            callback(reply.value.toString('utf8', 0, reply.value.length), null);
         } else {
             callback(null, maybeConvertReplyValue(originalCommand[0], reply));
         }
@@ -421,11 +421,11 @@ Client.prototype.handlePublishedMessage_ = function (reply) {
 
     var isMessage = (reply.value.length == 3 &&
                      reply.value[0].value.length == 7 &&
-                     reply.value[0].value.asciiSlice(0, 7) == 'message');
+                     reply.value[0].value.toString('ascii', 0, 7) == 'message');
 
     var isPMessage = (reply.value.length == 4 &&
                       reply.value[0].value.length == 8 &&
-                      reply.value[0].value.asciiSlice(0, 8) == 'pmessage');
+                      reply.value[0].value.toString('ascii', 0, 8) == 'pmessage');
 
     if (!isMessage && !isPMessage)
         return false;
@@ -496,7 +496,7 @@ function maybeConvertReplyValue(commandName, reply) {
 
     if (commandName === 'info' && reply.type === BULK) {
         var info = {};
-        reply.value.asciiSlice(0, reply.value.length).split(/\r\n/g)
+        reply.value.toString('ascii', 0, reply.value.length).split(/\r\n/g)
             .forEach(function (line) {
                 var parts = line.split(':');
                 if (parts.length === 2)
@@ -522,7 +522,7 @@ function maybeConvertReplyValue(commandName, reply) {
     // Redis returns "+OK\r\n" to signify success.
     // We convert this into a JS boolean with value true.
     
-    if (reply.type === INLINE && reply.value.asciiSlice(0,2) === 'OK')
+    if (reply.type === INLINE && reply.value.toString('ascii', 0,2) === 'OK')
         return true;
 
     // ZSCORE returns a string representation of a floating point number.
@@ -692,9 +692,9 @@ Client.prototype.sendCommand = function () {
     // accomodate a request, it stays that size until it needs to grown again,
     // which may of course be never.
 
-    var offset = this.requestBuffer.utf8Write('*' + argCount.toString() + CRLF +
+    var offset = this.requestBuffer.write('*' + argCount.toString() + CRLF +
                                               '$' + commandName.length + CRLF +
-                                              commandName + CRLF, 0);
+                                              commandName + CRLF, 0, 'utf8');
 
     var self = this;
 
@@ -723,14 +723,14 @@ Client.prototype.sendCommand = function () {
         var arg = arguments[i];
         if (arg instanceof Buffer) {
             ensureSpaceFor(arg.length + arg.length.toString().length + extrasLength);
-            offset += this.requestBuffer.asciiWrite('$' + arg.length + CRLF, offset);
+            offset += this.requestBuffer.write('$' + arg.length + CRLF, offset, 'ascii');
             offset += arg.copy(this.requestBuffer, offset, 0);  // target, targetStart, srcStart
-            offset += this.requestBuffer.asciiWrite(CRLF, offset);
+            offset += this.requestBuffer.write(CRLF, offset, 'ascii');
         } else if (arg.toString) {
             var asString = arg.toString();
             var serialized = '$' + Buffer.byteLength(asString, "binary") + CRLF + asString + CRLF;
             ensureSpaceFor(Buffer.byteLength(serialized, "binary"));
-            offset += this.requestBuffer.binaryWrite(serialized, offset);
+            offset += this.requestBuffer.write(serialized, offset, 'binary');
         }
     }
 
@@ -907,12 +907,12 @@ exports.convertMultiBulkBuffersToUTF8Strings = function (o) {
     if (o instanceof Array) {
         for (var i=0; i<o.length; ++i) 
             if (o[i] instanceof Buffer) 
-                o[i] = o[i].utf8Slice(0, o[i].length);
+                o[i] = o[i].toString('utf8', 0, o[i].length);
     } else if (o instanceof Object) {
         var props = Object.getOwnPropertyNames(o);
         for (var i=0; i<props.length; ++i) 
             if (o[props[i]] instanceof Buffer) 
-                o[props[i]] = o[props[i]].utf8Slice(0, o[props[i]].length);
+                o[props[i]] = o[props[i]].toString('utf8', 0, o[props[i]].length);
     }
 };
 

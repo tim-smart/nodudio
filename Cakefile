@@ -61,21 +61,23 @@ task 'build:client', 'Build client coffee', ->
     'assets/coffee/nodudio.coffee'
     'assets/js/events.js'
     'assets/coffee/socket.coffee'
+    'assets/coffee/main.coffee'
   ], {
     type:     'coffee'
     wrap:     yes
     compile:  no
     compress: no
-    watch:    no
+    watch:    yes
   }
   scripts.serve()
 
   css = new Package 'public/css/master.css', [
-    'assets/css'
+    'assets/css/common.css'
+    'assets/css/screen.css'
   ], {
     type:     'css'
     compile:  no
     compress: no
-    watch:    no
+    watch:    yes
   }
   css.serve()
