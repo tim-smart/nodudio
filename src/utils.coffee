@@ -1,7 +1,11 @@
-fs     = require 'fs'
-path   = require 'path'
-crypto = require 'crypto'
-Task   = require('parallel').Task
+fs       = require 'fs'
+path     = require 'path'
+crypto   = require 'crypto'
+Task     = require('parallel').Task
+FreeList = require('freelist').FreeList
+
+# Shared noop for save lots of little closures.
+noop = exports.noop = ->
 
 exports.idFromString = (string) ->
   string.trim().toLowerCase().replace /[^a-z0-9]+/ig, '-'
@@ -55,3 +59,66 @@ class DirectoryWalker
           $.callback file, file_path, stat, no
 
 exports.DirectoryWalker = DirectoryWalker
+
+ioWatchers = new FreeList 'iowatcher', 100, ->
+  new process.IOWatcher
+
+class FileSender
+  constructor: (fd, socket) ->
+    @socket  = socket
+    @fd      = fd
+    # Allocate a new watcher from the freelist
+    @watcher = ioWatchers.alloc()
+    @start   = 0
+    @length  = 0
+    # Callback called on event
+    $ = this
+    @watcher.callback = (r, w) ->
+      $.onDrain r, w
+    # set(fs, read, write)
+    @watcher.set @socket.fd, no, yes
+
+  send: (start, length, cb) ->
+    @callback = cb or noop
+    @start  = start
+    @length = length or 0
+    @sendfile()
+
+  sendfile: ->
+    #console.log @socket.fd, @fd, @start, @length
+    $ = this
+    if @socket.fd and @fd
+      return fs.sendfile @socket.fd, @fd, @start, @length, (e, b) ->
+        $.onWrite e, b
+
+    @onEnd()
+
+  onWrite: (error, bytes) ->
+    if error
+      return switch error.errno
+        when process.EAGAIN
+          @watcher.start()
+        when process.EPIPE
+          @onEnd()
+        else
+          @onEnd error
+
+    @start  += bytes
+    @length -= bytes
+
+    return @sendfile() if @length > 0
+
+    @onEnd()
+
+  onDrain: (readable, writable) ->
+    @watcher.stop()
+    @sendfile()
+
+  onEnd: (error) ->
+    @callback error
+    @watcher.stop()
+    @watcher.callback = noop
+    ioWatchers.free @watcher
+    fs.close @fd, noop
+
+exports.FileSender = FileSender

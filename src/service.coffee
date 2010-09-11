@@ -103,7 +103,7 @@ class Indexer extends process.EventEmitter
         if error
           task = new Task
             song: [$.db.setModelKey, song, 'path']
-            path: [$.db.addLink 'path', path_e, song.id]
+            path: [$.db.addLink, 'path', path_e, song.id]
           task.run (key, error) ->
             $.emit 'error', error if error
             $.emit 'queue:next'   unless key
@@ -224,7 +224,7 @@ class Cleaner
     working = yes
     [path, path_e] = @queue.pop()
     fs.stat path, (error, stat) ->
-      if error then $.db.deletelink 'path', path_e, -> $.queueNext()
+      if error then $.db.deleteLink 'path', path_e, -> $.queueNext()
       else $.queueNext()
 
   queueNext: ->

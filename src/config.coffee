@@ -11,8 +11,8 @@ module.exports =
   http_port: 8080
 
   # Redis locations
-  redis_exec:    'deps/redis/src/redis-server'
-  redis_conf:    'redis.conf'
+  redis_exec:    __dirname + '/../deps/redis/src/redis-server'
+  redis_conf:    __dirname + '/../redis.conf'
   redis_port:    7373
   # How often to optimize append-onle file
   redis_rewrite: 20

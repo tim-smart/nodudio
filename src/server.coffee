@@ -21,8 +21,8 @@ router.get('/').bind (request, response, next) ->
   request.url = '/index.html'
   next()
 
-#router.get(/^\/.*\.(js|css|html).*$/).module('gzip').
-       #module('static', __dirname + '/../public')
+router.get(/^\/.*\.(css|js|html).*?$/).module('gzip').
+       module('static', __dirname + '/../public')
 
 router.module('sendfile', __dirname + '/../public').bind (request, response) ->
   response.sendBody(404, 'Asset not found: ' + request.url)

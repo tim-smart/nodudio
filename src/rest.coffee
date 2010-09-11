@@ -23,8 +23,9 @@ sendFile = (request, response, path) ->
     mime = switch pathm.extname path
       when '.m4a' then 'audio/mp4a-latm'
       else 'audio/mpeg'
-    read_opts = {}
-    headers   =
+    read_opts =
+      bufferSize: 1024 * 64
+    headers =
       'Content-Type':   mime
       'Content-Length': stat.size
       'Last-Modified':  stat.mtime.toUTCString()
