@@ -63,7 +63,7 @@ html, body {
   -webkit-box-sizing: border-box;
 }
 
-section#content {
+section#wrap {
   height: 100%;
   padding-bottom: 50px;
   width: 100%;
@@ -74,7 +74,7 @@ aside#sidebar {
   height: 100%;
   width: 250px;
 }
-section#browser {
+section#content {
   height: 100%;
   margin-left: 250px
 }
@@ -84,5 +84,82 @@ aside#controls {
   height: 50px;
   position: absolute;
   width: 100%;
+}
+
+section#browser {
+  height: 250px;
+}
+section#browser section {
+  float: left;
+  height: 100%;
+  width: 33%;
+}
+section#browser section#artist {
+  width: 34%;
+}
+
+section#song {
+}
+div#head {
+  display: block;
+  height: 25px;
+  line-height: 25px;
+  width: 100%;
+  background-image: -webkit-gradient(
+    linear,
+    left bottom,
+    left top,
+    color-stop(0, rgb(166,166,166)),
+    color-stop(0.90, rgb(214,214,214))
+  );
+  background-image: -moz-linear-gradient(
+    center bottom,
+    rgb(166,166,166) 0%,
+    rgb(214,214,214) 90%
+  );
+}
+div#head ul {
+  height: 100%;
+}
+div#head span, div#head ul li {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  color: #333;
+  display: block;
+  float: left;
+  font-size: 11px;
+  font-weight: bold;
+  padding-left: 8px;
+  text-shadow: 1px 1px #fff;
+}
+.song-list {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  display: block;
+  margin-left: 280px;
+  position: relative;
+}
+.album {
+  float: left;
+  width: 280px;
+}
+.name {
+  width: 30%;
+}
+.artist {
+  width: 30%;
+}
+.track {
+  width: 10%;
+}
+.duration {
+  width: 10%;
+}
+.genre {
+  width: 20%;
+}
+div#songs {
 }
 

@@ -6,11 +6,32 @@
     <link rel="stylesheet" href="/css/master.css" type="text/css" media="screen" charset="utf-8" />
   </head>
   <body>
-    <section id="content" class="border-box">
+    <section id="wrap" class="border-box">
       <aside id="sidebar" class="border-box">
+        <a href="#/music">Music</a>
       </aside>
-      <section id="browser" class="border-box">
-        Music stuff in here.
+      <section id="content" class="border-box">
+        <section id="browser">
+          <section id="genre"></section>
+          <section id="artist"></section>
+          <section id="album"></section>
+        </section>
+        <section id="song" class="border-box">
+          <div id="head">
+            <span class="album">Album</span>
+            <ul class="song-list">
+              <li class="name">Name</li>
+              <li class="artist">Artist</li>
+              <li class="track">Track</li>
+              <li class="duration">Duration</li>
+              <li class="genre">Genre</li>
+            </ul>
+          </div>
+          <div id="songs">
+            <ul class="album"></ul>
+            <ul id="songs-list" class="song-list"></ul>
+          </div>
+        </section>
       </section>
       <aside id="controls" class="border-box">
         <button id="previous"></button>
@@ -20,6 +41,6 @@
       </aside>
     </section>
   </body>
-  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+  <!--<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js" type="text/javascript" charset="utf-8"></script>--!>
   <script src="/js/all.js" type="text/javascript" charset="utf-8"></script>
 </html>

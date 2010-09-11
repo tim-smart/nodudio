@@ -143,7 +143,7 @@ Indexer.prototype.onSongMove = function(song, path_e, buffer) {
       if (error) {
         task = new Task({
           song: [$.db.setModelKey, song, 'path'],
-          path: [$.db.addLink('path', path_e, song.id)]
+          path: [$.db.addLink, 'path', path_e, song.id]
         });
         return task.run(function(key, error) {
           if (error) {
@@ -335,7 +335,7 @@ Cleaner.prototype.queueUpdate = function() {
   path = _a[0];
   path_e = _a[1];
   return fs.stat(path, function(error, stat) {
-    return error ? $.db.deletelink('path', path_e, function() {
+    return error ? $.db.deleteLink('path', path_e, function() {
       return $.queueNext();
     }) : $.queueNext();
   });

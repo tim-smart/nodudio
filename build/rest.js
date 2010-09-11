@@ -38,7 +38,9 @@ sendFile = function(request, response, path) {
         return 'audio/mpeg';
       }
     })();
-    read_opts = {};
+    read_opts = {
+      bufferSize: 1024 * 64
+    };
     headers = {
       'Content-Type': mime,
       'Content-Length': stat.size,

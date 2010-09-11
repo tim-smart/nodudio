@@ -1,8 +1,10 @@
-var DirectoryWalker, Task, crypto, fs, path;
+var DirectoryWalker, FileSender, FreeList, Task, crypto, fs, ioWatchers, noop, path;
 fs = require('fs');
 path = require('path');
 crypto = require('crypto');
 Task = require('parallel').Task;
+FreeList = require('freelist').FreeList;
+noop = (exports.noop = function() {});
 exports.idFromString = function(string) {
   return string.trim().toLowerCase().replace(/[^a-z0-9]+/ig, '-');
 };
@@ -73,3 +75,66 @@ DirectoryWalker.prototype.onDir = function(dir) {
   });
 };
 exports.DirectoryWalker = DirectoryWalker;
+ioWatchers = new FreeList('iowatcher', 100, function() {
+  return new process.IOWatcher();
+});
+FileSender = function(fd, socket) {
+  var $;
+  this.socket = socket;
+  this.fd = fd;
+  this.watcher = ioWatchers.alloc();
+  this.start = 0;
+  this.length = 0;
+  $ = this;
+  this.watcher.callback = function(r, w) {
+    return $.onDrain(r, w);
+  };
+  this.watcher.set(this.socket.fd, false, true);
+  return this;
+};
+FileSender.prototype.send = function(start, length, cb) {
+  this.callback = cb || noop;
+  this.start = start;
+  this.length = length || 0;
+  return this.sendfile();
+};
+FileSender.prototype.sendfile = function() {
+  var $;
+  $ = this;
+  if (this.socket.fd && this.fd) {
+    return fs.sendfile(this.socket.fd, this.fd, this.start, this.length, function(e, b) {
+      return $.onWrite(e, b);
+    });
+  }
+  return this.onEnd();
+};
+FileSender.prototype.onWrite = function(error, bytes) {
+  var _a;
+  if (error) {
+    if ((_a = error.errno) === process.EAGAIN) {
+      return this.watcher.start();
+    } else if (_a === process.EPIPE) {
+      return this.onEnd();
+    } else {
+      return this.onEnd(error);
+    }
+  }
+  this.start += bytes;
+  this.length -= bytes;
+  if (this.length > 0) {
+    return this.sendfile();
+  }
+  return this.onEnd();
+};
+FileSender.prototype.onDrain = function(readable, writable) {
+  this.watcher.stop();
+  return this.sendfile();
+};
+FileSender.prototype.onEnd = function(error) {
+  this.callback(error);
+  this.watcher.stop();
+  this.watcher.callback = noop;
+  ioWatchers.free(this.watcher);
+  return fs.close(this.fd, noop);
+};
+exports.FileSender = FileSender;

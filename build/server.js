@@ -18,6 +18,7 @@ router.get('/').bind(function(request, response, next) {
   request.url = '/index.html';
   return next();
 });
+router.get(/^\/.*\.(css|js|html).*?$/).module('gzip').module('static', __dirname + '/../public');
 router.module('sendfile', __dirname + '/../public').bind(function(request, response) {
   return response.sendBody(404, 'Asset not found: ' + request.url);
 });
