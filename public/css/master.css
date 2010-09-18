@@ -66,16 +66,19 @@ html, body {
 section#wrap {
   height: 100%;
   padding-bottom: 50px;
+  position: relative;
   width: 100%;
 }
 aside#sidebar {
   background: #999;
   float: left;
   height: 100%;
+  position: relative;
   width: 250px;
 }
 section#content {
   height: 100%;
+  position: relative;
   margin-left: 250px
 }
 aside#controls {
@@ -88,10 +91,15 @@ aside#controls {
 
 section#browser {
   height: 250px;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
 }
 section#browser section {
   float: left;
   height: 100%;
+  position: relative;
   width: 33%;
 }
 section#browser section#artist {
@@ -99,12 +107,11 @@ section#browser section#artist {
 }
 
 section#song {
+  height: 100%;
+  padding-top: 275px;
+  position: relative;
 }
 div#head {
-  display: block;
-  height: 25px;
-  line-height: 25px;
-  width: 100%;
   background-image: -webkit-gradient(
     linear,
     left bottom,
@@ -117,9 +124,16 @@ div#head {
     rgb(166,166,166) 0%,
     rgb(214,214,214) 90%
   );
+  display: block;
+  height: 25px;
+  left: 0;
+  position: absolute;
+  top: 250px;
+  width: 100%;
 }
 div#head ul {
   height: 100%;
+  margin-left: 280px;
 }
 div#head span, div#head ul li {
   box-sizing: border-box;
@@ -130,20 +144,63 @@ div#head span, div#head ul li {
   float: left;
   font-size: 11px;
   font-weight: bold;
+  line-height: 25px;
   padding-left: 8px;
   text-shadow: 1px 1px #fff;
 }
-.song-list {
+ul#songs {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  cursor: default;
+  display: block;
+  height: 100%;
+  position: relative;
+}
+ul#songs li {
+  display: block;
+  position: relative;
+}
+ul#songs li div {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  height: 100%;
+}
+ul#songs li set {
+  display: block;
+  margin-left: 280px;
+}
+ul#songs li set song {
+  display: block;
+  height: 24px;
+  position: relative;
+  width: 100%;
+}
+ul#songs li set song.odd {
+  background-color: #444;
+}
+ul#songs li set song span {
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   -webkit-box-sizing: border-box;
   display: block;
-  margin-left: 280px;
-  position: relative;
+  float: left;
+  font-size: 11px;
+  font-weight: bold;
+  height: 100%;
+  line-height: 24px;
+  padding-left: 8px;
+  text-shadow: 1px 1px #111;
 }
 .album {
   float: left;
   width: 280px;
+}
+div.album {
+  box-shadow: 0px 10px 50px 0px #222 inset;
+  -webkit-box-shadow: 0px 10px 50px 0px #222 inset;
+  -moz-box-shadow: 0px 10px 50px 0px #222 inset;
 }
 .name {
   width: 30%;
@@ -159,7 +216,5 @@ div#head span, div#head ul li {
 }
 .genre {
   width: 20%;
-}
-div#songs {
 }
 

@@ -83,7 +83,15 @@ class Indexer extends process.EventEmitter
     $ = this
     fs.readFile song.get('path'), (error, buffer) ->
       return $.handleError error if error
-      song.set 'md5', utils.md5 buffer
+      tags = new ID3 buffer
+      tags.parse()
+      song.set 'name',        (tags.get 'title')  or 'Unknown'
+      song.set 'artist_name', (tags.get 'artist') or 'Unknown'
+      song.set 'album_name',  (tags.get 'album')  or 'Unknown'
+      song.set 'genre',       (tags.get 'genre')  or 'Unknown'
+      song.set 'track',       (tags.get 'track')  or '0'
+      song.set 'track',       song.get('track').toString().split('/')[0]
+      song.set 'rating',      song.get 'rating', 0
       $.db.getLink 'song', song.stringId(), (error, song_id) ->
         return $.handleError error if error
         # Same song different path?
@@ -91,8 +99,6 @@ class Indexer extends process.EventEmitter
           song.id = song_id.toString()
           $.emit 'song:move', song, path_e, buffer
         else
-          tags = new ID3 buffer
-          tags.parse()
           $.emit 'song:valid', song, tags
 
   onSongMove: (song, path_e, buffer) ->
@@ -111,13 +117,6 @@ class Indexer extends process.EventEmitter
 
   onSongValid: (song, tags) ->
     $ = this
-    song.set 'name',        (tags.get 'title')  or 'Unknown'
-    song.set 'artist_name', (tags.get 'artist') or 'Unknown'
-    song.set 'album_name',  (tags.get 'album')  or 'Unknown'
-    song.set 'genre',       (tags.get 'genre')  or 'Unknown'
-    song.set 'track',       (tags.get 'track')  or '0'
-    song.set 'track',       song.get('track').toString().split('/')[0]
-    song.set 'rating',      song.get 'rating', 0
     @db.getId 'song', (error, song_id) ->
       return $.handleError error if error
       return $.emit 'queue:next' unless song_id

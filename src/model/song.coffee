@@ -9,14 +9,10 @@ class Song extends Base
     'name',        'album_id',   'artist_id'
     'artist_name', 'album_name', 'genre'
     'rating',      'path',       'track'
-    'md5'
   ]
 
   belongs_to: ['artist', 'album']
   private:    ['path']
-
-  stringId: ->
-    @data['md5']
 
   remove: (cb) ->
     super (error) =>

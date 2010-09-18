@@ -17,12 +17,9 @@ Song = function() {
 };
 __extends(Song, Base);
 Song.prototype.name = 'song';
-Song.prototype.properties = ['name', 'album_id', 'artist_id', 'artist_name', 'album_name', 'genre', 'rating', 'path', 'track', 'md5'];
+Song.prototype.properties = ['name', 'album_id', 'artist_id', 'artist_name', 'album_name', 'genre', 'rating', 'path', 'track'];
 Song.prototype.belongs_to = ['artist', 'album'];
 Song.prototype.private = ['path'];
-Song.prototype.stringId = function() {
-  return this.data['md5'];
-};
 Song.prototype.remove = function(cb) {
   return Song.__super__.remove.call(this, __bind(function(error) {
     var path_e;

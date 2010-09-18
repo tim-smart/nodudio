@@ -1,5 +1,5 @@
 var Task, callbacks, client, config, redis, server, spawn;
-redis = require('../deps/redis-client');
+redis = require('redis');
 config = require('./config');
 spawn = require('child_process').spawn;
 Task = require('parallel').Task;
@@ -13,24 +13,26 @@ server.stderr.on('data', function(data) {
 client = (exports.client = null);
 callbacks = [];
 setTimeout(function() {
-  var _a, _b, _c, callback;
   client = (exports.client = redis.createClient(config.redis_port));
-  _b = callbacks;
-  for (_a = 0, _c = _b.length; _a < _c; _a++) {
-    callback = _b[_a];
-    callback();
-  }
-  return (callbacks = []);
+  return client.on("connect", function() {
+    var _a, _b, _c, callback;
+    _b = callbacks;
+    for (_a = 0, _c = _b.length; _a < _c; _a++) {
+      callback = _b[_a];
+      callback();
+    }
+    return (callbacks = []);
+  });
 }, 500);
 exports.onLoad = function(callback) {
   return callbacks.push(callback);
 };
 exports.onLoad(function() {
   console.log('[redis] Re-writing append-only file');
-  return client.sendCommand('BGREWRITEAOF');
+  return client.bgrewriteaof();
 });
 setInterval(function() {
-  return client.sendCommand('BGREWRITEAOF');
+  return client.bgrewriteaof();
 }, config.redis_rewrite * 60 * 1000);
 process.on('exit', function() {
   return server.kill();

@@ -28,7 +28,7 @@ socket = (exports.socket = ws.createServer({
 }));
 socket.on('connection', function(client) {
   return client.on('message', function(message) {
-    var _a, cache_key, data, id, index;
+    var cache_key, data, id, index;
     if (~(index = message.indexOf('|'))) {
       data = message.slice(index + 1);
       message = message.slice(0, index).split(':');
@@ -37,7 +37,8 @@ socket.on('connection', function(client) {
     }
     console.log("[WebSocket] " + (message.join(':')));
     id = message.shift();
-    if ((_a = message[0]) === 'get') {
+    switch (message[0]) {
+    case 'get':
       cache_key = utils.makeCacheKey(message[1], message[2], message[3]);
       return !api.cache[cache_key] ? api.get(message[1], message[2], message[3], function(error, result) {
         if (error) {

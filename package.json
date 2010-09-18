@@ -9,7 +9,8 @@
     "id3": ">=0.0.1",
     "parallel": ">=0.1.3",
     "node-asset": ">=0.1.5",
-    "websocket-server": ">=1.3.50"
+    "websocket-server": ">=1.3.50",
+    "redis": ">=0.0.1"
   },
   "bin": {
     "nodudio": "./server.js"

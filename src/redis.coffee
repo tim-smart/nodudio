@@ -1,7 +1,9 @@
-redis  = require '../deps/redis-client'
+redis  = require 'redis'
 config = require './config'
 spawn  = require('child_process').spawn
 Task   = require('parallel').Task
+
+#redis.debug_mode = yes
 
 server = exports.server = spawn config.redis_exec, [config.redis_conf]
 
@@ -13,8 +15,9 @@ client = exports.client = null
 callbacks = []
 setTimeout ->
   client = exports.client = redis.createClient config.redis_port
-  callback() for callback in callbacks
-  callbacks = []
+  client.on "connect", ->
+    callback() for callback in callbacks
+    callbacks = []
 , 500
 
 exports.onLoad = (callback) ->
@@ -23,9 +26,9 @@ exports.onLoad = (callback) ->
 # Rewrite append onle file every 10 minutes and on startup
 exports.onLoad ->
   console.log '[redis] Re-writing append-only file'
-  client.sendCommand 'BGREWRITEAOF'
+  client.bgrewriteaof()
 setInterval ->
-  client.sendCommand 'BGREWRITEAOF'
+  client.bgrewriteaof()
 , config.redis_rewrite * 60 * 1000
 
 process.on 'exit', ->

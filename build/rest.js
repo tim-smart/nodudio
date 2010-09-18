@@ -27,14 +27,15 @@ module.exports = function() {
 };
 sendFile = function(request, response, path) {
   return fs.stat(path, function(error, stat) {
-    var _a, file, headers, mime, read_opts;
+    var file, headers, mime, read_opts;
     if (error) {
       return respondWith404(request, response);
     }
     mime = (function() {
-      if ((_a = pathm.extname(path)) === '.m4a') {
+      switch (pathm.extname(path)) {
+      case '.m4a':
         return 'audio/mp4a-latm';
-      } else {
+      default:
         return 'audio/mpeg';
       }
     })();

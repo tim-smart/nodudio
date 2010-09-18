@@ -111,12 +111,20 @@ Indexer.prototype.onSongFound = function(song, path_e) {
   var $;
   $ = this;
   return fs.readFile(song.get('path'), function(error, buffer) {
+    var tags;
     if (error) {
       return $.handleError(error);
     }
-    song.set('md5', utils.md5(buffer));
+    tags = new ID3(buffer);
+    tags.parse();
+    song.set('name', (tags.get('title')) || 'Unknown');
+    song.set('artist_name', (tags.get('artist')) || 'Unknown');
+    song.set('album_name', (tags.get('album')) || 'Unknown');
+    song.set('genre', (tags.get('genre')) || 'Unknown');
+    song.set('track', (tags.get('track')) || '0');
+    song.set('track', song.get('track').toString().split('/')[0]);
+    song.set('rating', song.get('rating', 0));
     return $.db.getLink('song', song.stringId(), function(error, song_id) {
-      var tags;
       if (error) {
         return $.handleError(error);
       }
@@ -124,8 +132,6 @@ Indexer.prototype.onSongFound = function(song, path_e) {
         song.id = song_id.toString();
         return $.emit('song:move', song, path_e, buffer);
       } else {
-        tags = new ID3(buffer);
-        tags.parse();
         return $.emit('song:valid', song, tags);
       }
     });
@@ -162,13 +168,6 @@ Indexer.prototype.onSongMove = function(song, path_e, buffer) {
 Indexer.prototype.onSongValid = function(song, tags) {
   var $;
   $ = this;
-  song.set('name', (tags.get('title')) || 'Unknown');
-  song.set('artist_name', (tags.get('artist')) || 'Unknown');
-  song.set('album_name', (tags.get('album')) || 'Unknown');
-  song.set('genre', (tags.get('genre')) || 'Unknown');
-  song.set('track', (tags.get('track')) || '0');
-  song.set('track', song.get('track').toString().split('/')[0]);
-  song.set('rating', song.get('rating', 0));
   return this.db.getId('song', function(error, song_id) {
     if (error) {
       return $.handleError(error);

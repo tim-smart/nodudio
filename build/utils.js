@@ -109,13 +109,13 @@ FileSender.prototype.sendfile = function() {
   return this.onEnd();
 };
 FileSender.prototype.onWrite = function(error, bytes) {
-  var _a;
   if (error) {
-    if ((_a = error.errno) === process.EAGAIN) {
+    switch (error.errno) {
+    case process.EAGAIN:
       return this.watcher.start();
-    } else if (_a === process.EPIPE) {
+    case process.EPIPE:
       return this.onEnd();
-    } else {
+    default:
       return this.onEnd(error);
     }
   }
