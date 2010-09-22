@@ -68,7 +68,7 @@ Indexer.prototype.handleError = function(error) {
   return $.emit('error', error);
 };
 Indexer.prototype.onQueueUpdate = function() {
-  var _a, file, stat;
+  var _ref, file, stat;
   if (this.working) {
     return null;
   }
@@ -80,9 +80,9 @@ Indexer.prototype.onQueueUpdate = function() {
     return null;
   }
   this.working = true;
-  _a = this.queue.pop();
-  file = _a[0];
-  stat = _a[1];
+  _ref = this.queue.pop();
+  file = _ref[0];
+  stat = _ref[1];
   return this.emit('queue:item', file, stat);
 };
 Indexer.prototype.onQueueNext = function() {
@@ -299,16 +299,16 @@ Cleaner.prototype.run = function(cb) {
   this.callback = cb;
   $ = this;
   return this.db.client.hkeys('link:path', function(error, data) {
-    var _a, _b, _c, path_e;
+    var _i, _len, _ref, path_e;
     if (error) {
       return $.callback(error);
     }
     if (!(data)) {
       return $.callback();
     }
-    _b = data;
-    for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      path_e = _b[_a];
+    _ref = data;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      path_e = _ref[_i];
       path_e = path_e.toString();
       $.queue.push([decodeURI(path_e), path_e]);
     }
@@ -316,7 +316,7 @@ Cleaner.prototype.run = function(cb) {
   });
 };
 Cleaner.prototype.queueUpdate = function() {
-  var $, _a, path, path_e, working;
+  var $, _ref, path, path_e, working;
   if (working) {
     return null;
   }
@@ -330,9 +330,9 @@ Cleaner.prototype.queueUpdate = function() {
     });
   }
   working = true;
-  _a = this.queue.pop();
-  path = _a[0];
-  path_e = _a[1];
+  _ref = this.queue.pop();
+  path = _ref[0];
+  path_e = _ref[1];
   return fs.stat(path, function(error, stat) {
     return error ? $.db.deleteLink('path', path_e, function() {
       return $.queueNext();
@@ -344,7 +344,7 @@ Cleaner.prototype.queueNext = function() {
   return this.queueUpdate();
 };
 Cleaner.prototype.removeEmptyAlbums = function(albums) {
-  var $, _a, _b, _c, get_task, id, remove_task, task;
+  var $, _i, _len, _ref, get_task, id, remove_task, task;
   $ = this;
   if (!albums) {
     return this.db.getCollection('artist', function(error, artists) {
@@ -357,9 +357,9 @@ Cleaner.prototype.removeEmptyAlbums = function(albums) {
   remove_task = new Task();
   get_task = new Task();
   task = new Task();
-  _b = albums;
-  for (_a = 0, _c = _b.length; _a < _c; _a++) {
-    id = _b[_a];
+  _ref = albums;
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    id = _ref[_i];
     id = id.toString();
     task.add(id, [this.db.sCard, ("link:album:" + (id) + ":song")]);
   }
@@ -385,7 +385,7 @@ Cleaner.prototype.removeEmptyAlbums = function(albums) {
   });
 };
 Cleaner.prototype.removeEmptyArtists = function(artists) {
-  var $, _a, _b, _c, get_task, id, remove_task, task;
+  var $, _i, _len, _ref, get_task, id, remove_task, task;
   if (!artists) {
     return this.callback();
   }
@@ -393,9 +393,9 @@ Cleaner.prototype.removeEmptyArtists = function(artists) {
   remove_task = new Task();
   get_task = new Task();
   task = new Task();
-  _b = artists;
-  for (_a = 0, _c = _b.length; _a < _c; _a++) {
-    id = _b[_a];
+  _ref = artists;
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    id = _ref[_i];
     id = id.toString();
     task.add(id, [this.db.sCard, ("link:artist:" + (id) + ":song")]);
   }

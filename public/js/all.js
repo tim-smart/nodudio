@@ -3,7 +3,7 @@
     socket: null,
     EventEmitter: null
   });
-})();
+}).call(this);
 
 (function () {var EventEmitter = function EventEmitter() {
   this.listeners = {};
@@ -71,13 +71,13 @@ nodudio.EventEmitter = EventEmitter;
         message = message.split(':');
       }
       switch (message[0]) {
-      case 'save':
-        return emitter.emit('save', message[1], message[2], JSON.parse(data));
-      default:
-        if (callback = callbacks[message[0]]) {
-          callbacks[message[0]] = undefined;
-          return callback(data);
-        }
+        case 'save':
+          return emitter.emit('save', message[1], message[2], JSON.parse(data));
+        default:
+          if (callback = callbacks[message[0]]) {
+            callbacks[message[0]] = undefined;
+            return callback(data);
+          }
       }
     } catch (error) {
       if (console && console.log) {
@@ -88,7 +88,7 @@ nodudio.EventEmitter = EventEmitter;
   emitter.on('save', function(model, id, data) {
     return console.log(model, id, data);
   });
-})();
+}).call(this);
 
 (function() {
   jQuery.fn.disableTextSelect = function() {
@@ -110,5 +110,5 @@ nodudio.EventEmitter = EventEmitter;
   $('song').each(function(i) {
     return i % 2 ? (this.className = 'odd') : null;
   });
-})();
+}).call(this);
 

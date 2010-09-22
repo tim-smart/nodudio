@@ -42,7 +42,7 @@ DirectoryWalker.prototype.onDir = function(dir) {
   ++this.counter;
   $ = this;
   return fs.readdir(dir, function(error, files) {
-    var _a, _b, _c, file, task;
+    var _i, _len, _ref, file, task;
     if (error) {
       --$.counter;
       if ($.counter <= 0) {
@@ -51,9 +51,9 @@ DirectoryWalker.prototype.onDir = function(dir) {
       return null;
     }
     task = new Task();
-    _b = files;
-    for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      file = _b[_a];
+    _ref = files;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      file = _ref[_i];
       task.add(file, [fs.stat, path.join(dir, file)]);
     }
     return task.run(function(file, error, stat) {
@@ -111,12 +111,12 @@ FileSender.prototype.sendfile = function() {
 FileSender.prototype.onWrite = function(error, bytes) {
   if (error) {
     switch (error.errno) {
-    case process.EAGAIN:
-      return this.watcher.start();
-    case process.EPIPE:
-      return this.onEnd();
-    default:
-      return this.onEnd(error);
+      case process.EAGAIN:
+        return this.watcher.start();
+      case process.EPIPE:
+        return this.onEnd();
+      default:
+        return this.onEnd(error);
     }
   }
   this.start += bytes;

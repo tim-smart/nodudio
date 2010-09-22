@@ -18,14 +18,14 @@ module.exports = {
       return cb(error);
     }
     return !id ? redis.getCollection(resource, function(error, result) {
-      var _a, _b, _c, id, results, task;
+      var _i, _len, _ref, id, results, task;
       if (error) {
         return cb(error);
       }
       task = new Task();
-      _b = result;
-      for (_a = 0, _c = _b.length; _a < _c; _a++) {
-        id = _b[_a];
+      _ref = result;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        id = _ref[_i];
         id = id.toString();
         task.add(id, [redis.getModel, new model(), id]);
       }
@@ -54,15 +54,15 @@ module.exports = {
       }
       result.set('_id', id);
       return action && ~result.has_many.indexOf(action) ? redis.getModelLinks(result, action, function(error, results) {
-        var _a, _b, _c, id, ret, task;
+        var _i, _len, _ref, id, ret, task;
         if (error) {
           return cb(error);
         }
         model = require("./model/" + (action));
         task = new Task();
-        _b = results;
-        for (_a = 0, _c = _b.length; _a < _c; _a++) {
-          id = _b[_a];
+        _ref = results;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          id = _ref[_i];
           id = id.toString();
           task.add(id, [redis.getModel, new model(), id]);
         }
@@ -101,26 +101,26 @@ module.exports = {
       this.cache_callbacks[cache_key] = [cb];
       cache_callbacks = this.cache_callbacks;
       return this.get(resource, id, action, function(error, result) {
-        var _a, _b, _c, _d, _e, _f, _g, callback, model;
+        var _i, _len, _ref, _result, callback, model;
         if (error) {
           return cb(error);
         }
         result = (function() {
           if (Array.isArray(result)) {
-            _a = []; _c = result;
-            for (_b = 0, _d = _c.length; _b < _d; _b++) {
-              model = _c[_b];
-              _a.push(model.toObject());
+            _result = []; _ref = result;
+            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+              model = _ref[_i];
+              _result.push(model.toObject());
             }
-            return _a;
+            return _result;
           } else {
             return result.toObject();
           }
         })();
         cache[cache_key] = new Buffer(JSON.stringify(result));
-        _f = cache_callbacks[cache_key];
-        for (_e = 0, _g = _f.length; _e < _g; _e++) {
-          callback = _f[_e];
+        _ref = cache_callbacks[cache_key];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          callback = _ref[_i];
           callback(null, cache[cache_key]);
         }
         return (cache_callbacks[cache_key] = undefined);

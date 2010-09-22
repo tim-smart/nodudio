@@ -7,11 +7,11 @@ pathm = require('path');
 utils = require('./utils');
 module.exports = function() {
   return function(request, response, next, path) {
-    var _a, action, id, resource;
-    _a = path.split('/');
-    resource = _a[0];
-    id = _a[1];
-    action = _a[2];
+    var _ref, action, id, resource;
+    _ref = path.split('/');
+    resource = _ref[0];
+    id = _ref[1];
+    action = _ref[2];
     return resource === 'song' && action === 'download' ? api.get('song', id, null, function(error, song) {
       if (error || !song.id) {
         return respondWith404(request, response);
@@ -33,10 +33,10 @@ sendFile = function(request, response, path) {
     }
     mime = (function() {
       switch (pathm.extname(path)) {
-      case '.m4a':
-        return 'audio/mp4a-latm';
-      default:
-        return 'audio/mpeg';
+        case '.m4a':
+          return 'audio/mp4a-latm';
+        default:
+          return 'audio/mpeg';
       }
     })();
     read_opts = {

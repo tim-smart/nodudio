@@ -67,7 +67,7 @@ task 'build:client', 'Build client coffee', ->
     wrap:     yes
     compile:  no
     compress: no
-    watch:    yes
+    watch:    no
   }
   scripts.serve()
 
@@ -78,6 +78,6 @@ task 'build:client', 'Build client coffee', ->
     type:     'css'
     compile:  no
     compress: no
-    watch:    yes
+    watch:    no
   }
   css.serve()

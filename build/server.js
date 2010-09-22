@@ -38,35 +38,35 @@ socket.on('connection', function(client) {
     console.log("[WebSocket] " + (message.join(':')));
     id = message.shift();
     switch (message[0]) {
-    case 'get':
-      cache_key = utils.makeCacheKey(message[1], message[2], message[3]);
-      return !api.cache[cache_key] ? api.get(message[1], message[2], message[3], function(error, result) {
-        if (error) {
-          return client.send("" + (id) + ":error|" + (error.toString()));
-        }
-        result = handleResult(result);
-        result = JSON.stringify(result);
-        client.send("" + (id) + "|" + (result));
-        return (api.cache[cache_key] = new Buffer(result));
-      }) : client.send("" + (id) + "|" + (api.cache[cache_key].toString()));
+      case 'get':
+        cache_key = utils.makeCacheKey(message[1], message[2], message[3]);
+        return !api.cache[cache_key] ? api.get(message[1], message[2], message[3], function(error, result) {
+          if (error) {
+            return client.send("" + (id) + ":error|" + (error.toString()));
+          }
+          result = handleResult(result);
+          result = JSON.stringify(result);
+          client.send("" + (id) + "|" + (result));
+          return (api.cache[cache_key] = new Buffer(result));
+        }) : client.send("" + (id) + "|" + (api.cache[cache_key].toString()));
     }
   });
 });
 handleResult = function(result) {
-  var _a, _b, _c, _d, model;
+  var _i, _len, _ref, _result, model;
   if (Buffer.isBuffer(result)) {
     return result.toString();
   } else if (Array.isArray(result)) {
     result = (function() {
-      _a = []; _c = result;
-      for (_b = 0, _d = _c.length; _b < _d; _b++) {
-        model = _c[_b];
-        _a.push((function() {
+      _result = []; _ref = result;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        model = _ref[_i];
+        _result.push((function() {
           model.data.path = undefined;
           return model.data;
         })());
       }
-      return _a;
+      return _result;
     })();
     return result;
   } else if (result.data) {

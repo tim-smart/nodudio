@@ -15,10 +15,10 @@ callbacks = [];
 setTimeout(function() {
   client = (exports.client = redis.createClient(config.redis_port));
   return client.on("connect", function() {
-    var _a, _b, _c, callback;
-    _b = callbacks;
-    for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      callback = _b[_a];
+    var _i, _len, _ref, callback;
+    _ref = callbacks;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      callback = _ref[_i];
       callback();
     }
     return (callbacks = []);
@@ -63,7 +63,7 @@ exports.saveModel = function(model, cb) {
   model_key = (keys = null);
   is_new = false;
   insert = function(error, id) {
-    var _a, _b, _c, data, key;
+    var _i, _len, _ref, data, key;
     if (error) {
       return cb(error);
     }
@@ -71,9 +71,9 @@ exports.saveModel = function(model, cb) {
     model_key = ("" + (model.name) + ":" + (id));
     data = [model_key];
     keys = Object.keys(model.data);
-    _b = keys;
-    for (_a = 0, _c = _b.length; _a < _c; _a++) {
-      key = _b[_a];
+    _ref = keys;
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      key = _ref[_i];
       data.push(key);
       data.push(new Buffer(model.data[key], 'utf8'));
     }
@@ -130,13 +130,13 @@ exports.getModel = function(model, id, cb) {
   props = [("" + (model.name) + ":" + (id))];
   props.push.apply(props, model.properties);
   return client.hmget(props, function(error, result) {
-    var _a, _b, i, prop;
+    var _len, _ref, i, prop;
     if (error) {
       return cb(error);
     }
-    _a = model.properties;
-    for (i = 0, _b = _a.length; i < _b; i++) {
-      prop = _a[i];
+    _ref = model.properties;
+    for (i = 0, _len = _ref.length; i < _len; i++) {
+      prop = _ref[i];
       if (result[i]) {
         model.set(prop, result[i].toString());
       }
